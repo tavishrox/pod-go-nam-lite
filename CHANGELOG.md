@@ -12,6 +12,8 @@ Major changes, newest first. The repository has no version numbers, so each entr
   (`make podgo`; CMD7 waits for its R1b busy on this unit's eMMC). `tools/l6ia.py` takes the POD Go's marker.
 - Firmware builder in the browser (`web/pod-go/firmware-worker.js`): the stock file in, the NAM firmware out,
   compared with the tested build (MD5 61920a6c, the build that ran on a POD Go Wireless); `tests/test_podgo_build.py`.
+- NAM A2 Edition boot screens (`--edition`, a tick box on the setup page): Toneshift's lettering
+  (`art/nam-a2-edition/`, CC BY 4.0) drawn over the user's own boot screens; MD5 70cfd341.
 - Converter page for the POD Go (`web/pod-go/`), NAM preset templates (`templates/`, `podgo/make_templates.py`),
   a block helper for amps, cabs, IRs and FX loops in freed blocks (`podgo/blocks.py`), boot-screen images
   (`podgo/splash.py`), and the preset sweep (`podgo/preset_sweep.py`).

@@ -22,6 +22,11 @@ def test_md5s_and_options_match():
     assert js_value('BUILT_MD5') == build_podgo.BUILT_MD5
     assert js_value('KERNEL_ARGS') == build_podgo.KERNEL_ARGS
     assert js_value('OUT_NAME') == build_podgo.OUT_NAME
+    assert js_value('BUILT_MD5_EDITION') == build_podgo.BUILT_MD5_EDITION
+    assert js_value('OUT_NAME_EDITION') == build_podgo.OUT_NAME_EDITION
+    for path in js_value('EDITION_SOURCES'):
+        assert os.path.exists(os.path.join(ROOT, path)), path
+    assert {os.path.relpath(v[1], ROOT) for v in build_podgo.EDITION.values()} <= set(js_value('EDITION_SOURCES'))
 
 
 def test_sources_exist_and_cover_the_imports():

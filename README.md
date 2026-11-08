@@ -25,6 +25,7 @@ which does the same for the HX Stomp, HX Stomp XL and HX Effects. The HX instruc
 - **Cab included.** Most captures include the speaker cab, so turn the cab block off and spend that DSP on effects.
 - **Tone controls** after the capture (Bass, Mid with frequency and width, Treble, High Cut), **Input** to set
   how hard it's driven, and **Output**.
+- **A NAM A2 Edition boot screen** (optional): Toneshift's lettering over your POD Go's own splash.
 - **Free the fixed blocks.** [Preset templates](templates/) for NAM without the cab, FX loop or fixed EQ, and a
   [block helper](POD_GO.md#the-block-helper) to put an amp, cab, IR or FX loop into any empty block.
 

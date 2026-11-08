@@ -2,7 +2,10 @@
 """Build POD Go 2.50 firmware with NAM A2 Lite in the amp list, on Line 6 Elektrik's identity.
 
     python3 podgo/build_podgo.py POD_Go_v2.50.0_0x6e984472.hxf [-o OUT.hxf] [--no-check]
-        [--donor elektrik|plexi] [--splash IMG] [--splash-wireless IMG]
+        [--donor elektrik|plexi] [--edition] [--splash IMG] [--splash-wireless IMG]
+
+--edition: the "NAM A2 Edition" boot screens (art/nam-a2-edition/, by Toneshift), drawn over the boot screens
+of your own firmware file (no Line 6 artwork is in this repository). --splash IMG: a whole 480x272 image.
 
 Unofficial and experimental: try it from RAM first (tools/hxf_ram.py run OUT --stock STOCK).
 Steps (docs/PODGO_PORT_MAP.md):
@@ -29,6 +32,10 @@ STOCK_MD5S = {'e0ea3e1ed32f0f353b79f6ad39631838'}           # POD_Go_v2.50.0_0x6
 BUILT_MD5 = '61920a6cdb5342cecffcd968e1ae6ad1'              # the default build's .hxf (Elektrik, no splash)
 KERNEL_ARGS = ['--mid-sweep', '--podgo', '--plexi', '--static-sdram', '--block32']
 OUT_NAME = 'POD_Go_v2.50.0_NAM_A2_Lite.hxf'
+OUT_NAME_EDITION = 'POD_Go_v2.50.0_NAM_A2_Lite_Edition.hxf'
+BUILT_MD5_EDITION = '70cfd341bb4bf00422f7ea19c5b49e95'                                    # the --edition build's .hxf
+EDITION = {'Splash': ('overlay', os.path.join(ROOT, 'art', 'nam-a2-edition', 'wired.png')),
+           'Splash_Wireless': ('overlay', os.path.join(ROOT, 'art', 'nam-a2-edition', 'wireless.png'))}
 
 
 def run(*args):
@@ -43,7 +50,7 @@ def run(*args):
 
 def make_image(data, asm_src, asm_name='nam_lite_podgo_b32.asm', donor=None, splashes=None, log=print):
     """The L6IA image with NAM A2 Lite: `data` the stock L6IA, `asm_src` the kernel (nam_multi.py's output).
-    splashes: {'Splash' | 'Splash_Wireless': image path}."""
+    splashes: {'Splash' | 'Splash_Wireless': image path, or ('overlay', PNG) drawn over the stock screen}."""
     import kit_patch_amp as kp
     import l6ia
     import podgo_e2
@@ -55,8 +62,9 @@ def make_image(data, asm_src, asm_name='nam_lite_podgo_b32.asm', donor=None, spl
         import splash
         e7 = kp.get_entry_swapped(data, 7)
         e8 = new.get(8) or kp.get_entry_swapped(data, 8)
-        new[8] = splash.replace(e7, e8, name, path)
-        log(f'[+] Entry 8: {name} replaced by {path}')
+        overlay = isinstance(path, tuple)
+        new[8] = splash.replace(e7, e8, name, path[1] if overlay else path, overlay=overlay)
+        log(f'[+] Entry 8: {name} ' + (f'with {os.path.basename(path[1])} drawn over it' if overlay else f'replaced by {path}'))
     e = l6ia.parse(data)[2]
     e2 = podgo_e2.patch_e2(data[e['payload_off']: e['payload_off'] + e['payload_len']], asm_src, asm_name, log=log)
     new[2] = l6ia.swap32(e2)
@@ -74,7 +82,8 @@ def main():
         sys.exit(f'{stock}: MD5 {md5}, not POD_Go_v2.50.0_0x6e984472.hxf')
     build = os.path.join(ROOT, 'build')
     os.makedirs(build, exist_ok=True)
-    out = os.path.abspath(a[a.index('-o') + 1]) if '-o' in a else os.path.join(build, OUT_NAME)
+    out = os.path.abspath(a[a.index('-o') + 1]) if '-o' in a else \
+        os.path.join(build, OUT_NAME_EDITION if '--edition' in a else OUT_NAME)
     asm = os.path.join(build, 'nam_lite_podgo_b32.asm')
     meter = a[a.index('--meter') + 1] if '--meter' in a else None     # a test image (no check: it plays the meter)
     if meter:
@@ -84,8 +93,9 @@ def main():
 
     import patch_amp
     data, _ = patch_amp.load_l6ia_from_any(stock)
-    splashes = {name: os.path.abspath(a[a.index(opt) + 1])
-                for opt, name in (('--splash', 'Splash'), ('--splash-wireless', 'Splash_Wireless')) if opt in a}
+    splashes = dict(EDITION) if '--edition' in a else {}
+    splashes.update({name: os.path.abspath(a[a.index(opt) + 1])
+                     for opt, name in (('--splash', 'Splash'), ('--splash-wireless', 'Splash_Wireless')) if opt in a})
     image = make_image(data, open(asm).read(), os.path.basename(asm),
                        donor=a[a.index('--donor') + 1] if '--donor' in a else None, splashes=splashes)
     img_path = os.path.join(build, 'POD_Go_v2.50.0_NAM_A2_Lite.l6ia')
@@ -95,9 +105,10 @@ def main():
         sys.exit('build_podgo.py: the image failed its checksum check')
     run(sys.executable, 'tools/hxf.py', 'pack', img_path, out, '--donor', stock)
     got = hashlib.md5(open(out, 'rb').read()).hexdigest()
-    plain = not meter and not splashes and '--donor' not in a
-    print(f'\nDone: {out} (MD5 {got}' + (', the tested build' if got == BUILT_MD5 else
-                                         ', NOT the tested build: please report' if plain else '') + ')')
+    pinned = None if meter or '--donor' in a or (splashes and splashes != EDITION) else \
+        (BUILT_MD5_EDITION if splashes else BUILT_MD5)
+    print(f'\nDone: {out} (MD5 {got}' + (', the tested build' if got == pinned else
+                                         ', NOT the tested build: please report' if pinned else '') + ')')
     print(f'Try it from RAM first: python3 tools/hxf_ram.py run {os.path.relpath(out, ROOT)} --stock {a[0]}')
 
 

@@ -72,6 +72,11 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-spa
 .fwstatus { border-radius: 8px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--rule); border-left: 4px solid var(--rule); }
 .fwstatus b { display: block; color: var(--ink); }
 .fwstatus.ok { border-left-color: #2f7d4f; } .fwstatus.bad { border-left-color: #b42318; } .fwstatus.work { border-left-color: var(--accent); }
+.opt { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; cursor: pointer; }
+.opt input { margin-top: 4px; accent-color: var(--accent); }
+.edprev { display: grid; gap: 6px; }
+.edprev img { width: 100%; max-width: 480px; aspect-ratio: 480 / 272; background: #0b0b0b; border-radius: 8px; }
+.edprev span { color: var(--muted); font-size: 13px; }
 .row { display: flex; flex-wrap: wrap; gap: 10px; }
 button.btn { cursor: pointer; }
 details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
@@ -111,6 +116,8 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
       <li><div><h3>Back up and get the stock firmware</h3><p>Back up your presets and IRs with POD Go Edit. Keep Line 6's official <code>POD_Go_v2.50.0_0x6e984472.hxf</code> somewhere safe: you build from it, and it is your way back.</p></div></li>
       <li id="build"><div><h3>Build the NAM firmware</h3><p>Drop your stock file here. This page adds NAM A2 Lite to it, in your browser, and gives you the new file to install. Nothing is uploaded: your firmware never leaves this computer, so no Line 6 code is ever shared.</p>
         <div class="builder">
+          <label class="opt"><input type="checkbox" id="fwedition"> <span><b>Add the NAM A2 Edition boot screen</b> (Toneshift's lettering, drawn over your POD Go's own boot screen)</span></label>
+          <div class="edprev" id="edprev" hidden><img src="../../art/nam-a2-edition/wireless.png" alt="The NAM A2 Edition lettering"><span>Shown over the stock POD Go boot screen. The overlay holds only this lettering; your POD Go supplies the rest.</span></div>
           <label class="drop" id="fwdrop" tabindex="0" for="fwpick">
             <strong>Drop POD_Go_v2.50.0_0x6e984472.hxf here</strong>
             <span>or click to choose · about 45 MB · it stays on this computer</span>
@@ -204,7 +211,8 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
         reset();
         url = URL.createObjectURL(new Blob([m.bytes], { type: "application/octet-stream" }));
         save.href = url; save.download = m.file; done.hidden = false;
-        if (m.pinned) status("ok", "Verified: your POD Go firmware is ready.", " It is byte for byte the build the project tested on a POD Go (MD5 " + m.md5 + "). Download it, then install it with Line 6 Updater (step 3).");
+        if (m.pinned && m.edition) status("ok", "Verified: your POD Go firmware (NAM A2 Edition) is ready.", " It is byte for byte the project's Edition build (MD5 " + m.md5 + "): the build tested on a POD Go plus the boot screen. Download it, then install it with Line 6 Updater (step 3).");
+        else if (m.pinned) status("ok", "Verified: your POD Go firmware is ready.", " It is byte for byte the build the project tested on a POD Go (MD5 " + m.md5 + "). Download it, then install it with Line 6 Updater (step 3).");
         else status("bad", "Built, but not the tested file.", " Every checksum passed, but the result differs from the tested build (MD5 " + m.md5 + "). That shouldn't happen: please report it before installing.");
       } else if (m.type === "error") {
         reset();
@@ -212,7 +220,7 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
         else status("bad", "The build stopped.", " Nothing was written. Check your internet connection (the tools download the first time) and try again; the technical details say what happened. " + m.text.slice(0, 300));
       }
     };
-    worker.postMessage({ stock: buf }, [buf]);
+    worker.postMessage({ stock: buf, edition: $("fwedition").checked }, [buf]);
   }
   function fromFile(f) {
     if (!f) return;
@@ -221,6 +229,7 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
     r.onerror = function () { status("bad", "The file couldn't be read.", " Choose it again; if it's on a USB stick or network drive, copy it to this computer first."); };
     r.readAsArrayBuffer(f);
   }
+  $("fwedition").addEventListener("change", function () { $("edprev").hidden = !this.checked; });
   window.podgoBuild = start;                 // for testing: podgoBuild(arrayBuffer)
   pick.addEventListener("change", function () { fromFile(pick.files[0]); pick.value = ""; });
   drop.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick.click(); } });

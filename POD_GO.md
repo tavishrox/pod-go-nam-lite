@@ -171,6 +171,11 @@ before it in `build/blocks_undo/` (`blocks.py restore FILE`).
 
 ## Your own boot screen
 
+**NAM A2 Edition**: tick *Add the NAM A2 Edition boot screen* on the setup page, or build with `--edition`.
+Toneshift's lettering ([art/nam-a2-edition](art/nam-a2-edition/), CC BY 4.0) is drawn over your own POD Go's
+boot screen; the repository holds only the lettering.
+
+
 The splash screen with the Line 6 logo is a 480 x 272 app graphic (two of them: POD Go and POD Go Wireless).
 `podgo/splash.py preview IMAGE OUT.png` shows what an image will look like on the unit (fitted to the screen,
 16-bit colour), and the build takes it:
