@@ -40,12 +40,14 @@ the neural network on your guitar. You build the firmware yourself, from your ow
 ## Get started
 
 1. **Read the [POD Go guide](POD_GO.md)**: what's needed, building, installing, recovery, the knobs.
-2. **Build** the firmware from your stock `POD_Go_v2.50.0_0x6e984472.hxf`:
+2. **Build** the firmware: drop your stock `POD_Go_v2.50.0_0x6e984472.hxf` on the
+   [setup page](https://tavishrox.github.io/pod-go-nam-lite/#build). It builds in your browser (nothing is uploaded)
+   and says **Verified** when the result is byte for byte the tested build. Or on the command line:
    ```bash
    python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
    .venv/bin/python podgo/build_podgo.py POD_Go_v2.50.0_0x6e984472.hxf
    ```
-3. **Install** `build/POD_Go_v2.50.0_NAM_A2_Lite.hxf` with Line 6 Updater (*Choose File*), after a POD Go Edit backup.
+3. **Install** the built `POD_Go_v2.50.0_NAM_A2_Lite.hxf` with Line 6 Updater (*Choose File*), after a POD Go Edit backup.
 4. **Convert** your captures on the [converter page](https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/converter.html)
    and import the `.wav` files with POD Go Edit.
 5. **Play**: amp block → **NAM A2 Lite**, Model → your IR slot (0.0 = slot 1, 0.3 = slot 4), cab block off.

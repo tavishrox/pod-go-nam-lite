@@ -10,6 +10,8 @@ Major changes, newest first. The repository has no version numbers, so each entr
   (`nam_multi.py --block32`); DSP cost measured on the unit (2,850 units; the DSP runs at 393.216 MHz).
 - RAM runs on the POD Go: `tools/hxf_ram.py` (POD Go layout and app), loader `firmware-ramboot-podgo.dfu`
   (`make podgo`; CMD7 waits for its R1b busy on this unit's eMMC). `tools/l6ia.py` takes the POD Go's marker.
+- Firmware builder in the browser (`web/pod-go/firmware-worker.js`): the stock file in, the NAM firmware out,
+  compared with the tested build (MD5 61920a6c, the build that ran on a POD Go Wireless); `tests/test_podgo_build.py`.
 - Converter page for the POD Go (`web/pod-go/`), NAM preset templates (`templates/`, `podgo/make_templates.py`),
   a block helper for amps, cabs, IRs and FX loops in freed blocks (`podgo/blocks.py`), boot-screen images
   (`podgo/splash.py`), and the preset sweep (`podgo/preset_sweep.py`).

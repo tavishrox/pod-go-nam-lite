@@ -209,6 +209,10 @@ If the unit stops at the splash screen or an update fails:
 
 ## Building
 
+The easy way: the [setup page](https://tavishrox.github.io/pod-go-nam-lite/#build) builds it in your browser
+(Pyodide running these same tools; nothing is uploaded) and compares the result with the tested build. The
+command line does the same, plus a run of the NAM code in a SHARC simulator:
+
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/python podgo/build_podgo.py POD_Go_v2.50.0_0x6e984472.hxf
