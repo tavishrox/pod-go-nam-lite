@@ -37,7 +37,14 @@ def test_shared_numbers(name):
     assert header(name) == js(name) == getattr(hxf_ram, NAMES[name])
 
 
-@pytest.mark.skipif(shutil.which("arm-none-eabi-gcc") is None, reason="arm-none-eabi-gcc is not installed")
+def _has_nano_specs():
+    if shutil.which("arm-none-eabi-gcc") is None:
+        return False
+    r = subprocess.run(["arm-none-eabi-gcc", "-print-file-name=nano.specs"], capture_output=True, text=True)
+    return os.path.isabs(r.stdout.strip())     # a bare name back means newlib-nano is not there
+
+
+@pytest.mark.skipif(not _has_nano_specs(), reason="arm-none-eabi-gcc with newlib-nano (nano.specs) is not installed")
 def test_built_files_match_source(tmp_path):
     out = tmp_path / "out"
     r = subprocess.run(["make", "-C", str(ROOT / "src/ramboot"), f"OUT={out}", f"B={tmp_path / 'b'}"],

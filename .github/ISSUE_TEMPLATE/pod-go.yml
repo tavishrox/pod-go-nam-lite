@@ -1,0 +1,30 @@
+name: POD Go problem or question
+description: Something not working on a POD Go or POD Go Wireless
+labels: ["pod-go"]
+body:
+  - type: dropdown
+    id: unit
+    attributes:
+      label: Which POD Go?
+      options: ["POD Go (wired)", "POD Go Wireless"]
+    validations: {required: true}
+  - type: dropdown
+    id: area
+    attributes:
+      label: What is it about?
+      options: ["Building the firmware", "Installing / recovery", "Converting a capture", "Sound or knobs", "Templates or the block helper", "Something else"]
+    validations: {required: true}
+  - type: textarea
+    id: what
+    attributes:
+      label: What did you do, and what happened?
+      description: Steps, and any error text (copy it, don't paraphrase). For a capture that won't convert, give its name and where it came from; please don't attach .nam files you don't have the rights to share.
+    validations: {required: true}
+  - type: input
+    id: fw
+    attributes:
+      label: Firmware on the unit before
+      placeholder: "2.50 stock"
+  - type: markdown
+    attributes:
+      value: "Never attach a .hxf firmware file, built or stock: it contains Line 6's code and can't be shared here."

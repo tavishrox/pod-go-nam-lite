@@ -86,7 +86,7 @@ def parse(data):
     off = ROOT
     for n in range(count):
         idx = be32(data, off)
-        if data[off+4:off+8] != b'\x03\x80\x00\x00':
+        if data[off+4:off+8] not in (b'\x03\x80\x00\x00', b'\x02\x50\x00\x00'):
             raise ValueError(f'bad entry marker at {off+4:#x} (entry {n})')
         etype = be32(data, off+8)
         words = be32(data, off+0x10)
@@ -129,7 +129,8 @@ def rebuild_archive(orig_data, replaced_swapped_by_index):
             struct.pack_into('>I', sub, 0xc, plen)
             body = bytes(sub) + raw_payload
             h1, h2 = fletcher_words(body)
-            hdr = struct.pack('>9I', idx, 0x03800000, e['type'], 4, words, h1, h2, 0, 0)
+            marker = be32(orig_data, e['marker_off'])   # 0x03800000 HX, 0x02500000 POD Go
+            hdr = struct.pack('>9I', idx, marker, e['type'], 4, words, h1, h2, 0, 0)
             out += hdr + body
         else:
             raw_entry = orig_data[e['off']: e['payload_off'] + e['payload_len']]

@@ -118,6 +118,9 @@ static uint32_t emmc_cmd(uint32_t word, uint32_t arg) {
 static uint32_t emmc_ready(void) {
     for (unsigned i = 0; i < 1000; ++i) {
         uint32_t e = emmc_cmd(W_CMD13, EMMC_RCA << 16);
+#ifdef EMMC_CMD7_R1B
+        if (e && i < 999) { emmc_ms(1); continue; }         /* POD Go: retry a missed reply */
+#endif
         if (e) return e;
         uint32_t st = SD_RESP(0);
         if ((st >> 9 & 15u) == 4u && (st & 1u << 8)) return 0;
@@ -193,7 +196,14 @@ static uint32_t emmc_start(void) {
     for (unsigned i = 0; i < 4; ++i) emmc_cid[i] = SD_RESP(i);
     if (emmc_cmd(W_CMD3, EMMC_RCA << 16)) return 0x107;
     if (emmc_cmd(W_CMD9, EMMC_RCA << 16)) return 0x108;
+#ifdef EMMC_CMD7_R1B
+    /* POD Go (2026-11-07, on the unit): without waiting for CMD7's R1b reply, the first CMD13
+     * collides with it and times out (RTO), so the start stopped at 0x10B every time. */
+    if (emmc_cmd(W_CMD7 | 0x40u, EMMC_RCA << 16)) return 0x109;
+    emmc_ms(5);
+#else
     if (emmc_cmd(W_CMD7, EMMC_RCA << 16)) return 0x109;
+#endif
     if (emmc_clock(0)) return 0x10A;            /* 12 MHz */
     if (emmc_ready()) return 0x10B;
 

@@ -40,7 +40,7 @@ sys.path.insert(0, TOOLS)
 
 SECTOR = 512
 VID, PID = 0x1209, 0x0001
-PRODUCTS = {0x0006: "HX Stomp", 0x000B: "HX Stomp XL"}   # .hxf HEAD word at 0x0A
+PRODUCTS = {0x0006: "HX Stomp", 0x000B: "HX Stomp XL", 0x0007: "POD Go"}   # .hxf HEAD word at 0x0A
 
 # src/ramboot/ramboot.h (web/ramrun.js keeps a copy too: keep the three the same)
 RB_VERSION = 1
@@ -61,6 +61,12 @@ H_READ, H_WRITE, H_CARD, H_RCONT, H_WCONT, H_TABLE, H_MODE, H_PSLOTS, H_PDATA, H
 APPS = {
     0x2B81E740: ("HX Stomp", {"read": (0x28da5354, 0x28da555c), "write": (0x28da5708, 0x28da5910)}, 0x281d0eac),
     0xF8CD14D3: ("HX Stomp XL", {"read": (0x28da82d4, 0x28da84dc), "write": (0x28da8688, 0x28da8890)}, 0x281d211c),
+    # POD Go 2.50 (docs/PODGO_PORT_MAP.md): the same two functions, found by their prologue (the only
+    # two hits); both literals hold the card struct 0x28230740. Not yet run on a POD Go.
+    0xE0891668: ("POD Go", {"read": (0x28c6aa04, 0x28c6ac0c), "write": (0x28c6adb8, 0x28c6afc0)}, 0x28230740),
+    # POD Go 2.50 with NAM A2 Lite installed (release/POD_Go_v2.50.0_NAM_A2_Lite_Elektrik.hxf): only its
+    # data segment (0x28001a7c: names, Table 1 cost) differs from stock; the code segment is the same bytes.
+    0xA2399A2E: ("POD Go", {"read": (0x28c6aa04, 0x28c6ac0c), "write": (0x28c6adb8, 0x28c6afc0)}, 0x28230740),
 }
 PROLOGUE = bytes.fromhex("2de9f04f804dd5f84832")
 
@@ -75,6 +81,31 @@ PART_START = (0x0, 0x8001, 0x8802, 0x8c03, 0x940c, 0x11005, 0x11406, 0x19407, 0x
 PAYLOAD = tuple(s + 1 for s in PART_START)
 PART_END = PART_START[1:] + (None,)
 
+# The POD Go's partitions are not known from any file: `hxf_ram.py layout` finds where each stock
+# entry's payload starts on the card (read only) and writes them here.
+LAYOUT_DIR = os.path.join(TOOLS, "..", "podgo")
+LAYOUT_FILE = {"POD Go": os.path.join(LAYOUT_DIR, "emmc_layout_podgo_2.50.json")}
+
+
+def use_layout(unit):
+    """Point PAYLOAD / PART_END at the unit's partitions (the Stomp's are built in)."""
+    global PAYLOAD, PART_END
+    if unit not in LAYOUT_FILE:
+        PAYLOAD, PART_END = tuple(s + 1 for s in PART_START), PART_START[1:] + (None,)
+        return
+    path = LAYOUT_FILE[unit]
+    if not os.path.exists(path):        # fine while no entry but the application changes (overlay() checks)
+        PAYLOAD = PART_END = None
+        return
+    lay = json.load(open(path))
+    pay = lay["payload"]
+    PAYLOAD = tuple(pay)                    # None: not located (overlay() refuses to change it)
+    ends = []
+    for i in range(len(pay)):               # each payload follows a 1-sector sub-header
+        nxt = next((p for p in pay[i + 1:] if p is not None), None)
+        ends.append(nxt - 1 if nxt is not None else None)
+    PART_END = tuple(ends)
+
 
 def fail(msg):
     sys.exit(f"hxf_ram: {msg}")
@@ -82,7 +113,7 @@ def fail(msg):
 
 # ------------------------------------------------------------------ firmware
 
-def load(path, stock=False):
+def load(path, stock=False, any_count=False):
     """The entries of an .hxf or L6IA file, in the eMMC's (little-endian) form."""
     import hxf
     import l6ia
@@ -91,7 +122,7 @@ def load(path, stock=False):
         ch = {c: b for c, p, s, b in hxf._chunks(raw)}
         product = struct.unpack_from(">H", ch[b"HEAD"], 0x0A)[0]
         if product not in PRODUCTS:
-            fail(f"{path}: product {product:#06x} is neither the HX Stomp's nor the XL's")
+            fail(f"{path}: product {product:#06x} is not one this tool knows")
         data = zlib.decompress(ch[b"data"])
     elif raw[:4] == b"L6IA":
         if stock:
@@ -100,9 +131,22 @@ def load(path, stock=False):
     else:
         fail(f"{path}: neither an .hxf nor an L6IA archive")
     ents = l6ia.parse(data)
-    if len(ents) != len(PART_START):
-        fail(f"{path}: {len(ents)} entries, the unit has {len(PART_START)}")
+    if not any_count and PAYLOAD is not None and len(ents) != len(PAYLOAD):
+        fail(f"{path}: {len(ents)} entries, the unit's layout has {len(PAYLOAD)}")
     return [l6ia.swap32(data[e["payload_off"]: e["payload_off"] + e["payload_len"]]) for e in ents]
+
+
+def unit_of(path):
+    """The product an .hxf's HEAD names."""
+    import hxf
+    raw = open(path, "rb").read()
+    if raw[:4] != b"FORM":
+        fail(f"{path}: --stock must be the unit's stock .hxf (its HEAD names the product)")
+    ch = {c: b for c, p, s, b in hxf._chunks(raw)}
+    product = struct.unpack_from(">H", ch[b"HEAD"], 0x0A)[0]
+    if product not in PRODUCTS:
+        fail(f"{path}: product {product:#06x} is not one this tool knows")
+    return PRODUCTS[product]
 
 
 def app_of(e0):
@@ -162,6 +206,9 @@ def overlay(stock, new):
             continue
         if i == 1:
             fail("entry 1 (the bootloader) differs from stock: not something to run from RAM")
+        if PAYLOAD is None or PAYLOAD[i] is None:
+            fail(f"entry {i} differs from stock, and where it is on this unit's eMMC is not known yet: "
+                 "with the loader running, hxf_ram.py layout --stock STOCK.hxf")
         room = (PART_END[i] - PAYLOAD[i]) * SECTOR if PART_END[i] else None
         if room is not None and len(b) > room:
             fail(f"entry {i}: {len(b):#x} bytes, its partition holds {room:#x}")
@@ -189,10 +236,12 @@ def runs_of(sectors):
 def plan(firmware, stock_path, writes="ram", pool_sectors=4096, hook_bin=None):
     """Everything to load: regions [(addr, bytes, label)], the stock entries,
     the checks of the eMMC [(first sector, count, crc)] and a summary."""
+    unit = unit_of(stock_path)
+    use_layout(unit)
     stock, new = load(stock_path, stock=True), load(firmware)
     app = app_of(stock[0])
     if app is None:
-        fail(f"{stock_path}: not a 3.80 application this tool knows (its hook addresses are 3.80's)")
+        fail(f"{stock_path}: not an application this tool knows (HX Stomp/XL 3.80 or POD Go 2.50)")
     unit, emmc_funcs, card = app
     segs, entry = app_segments(new[0])
     if app_segments(stock[0])[0][-1][0] != segs[-1][0]:
@@ -292,8 +341,9 @@ class Loader:
                 break
             time.sleep(0.2)
         if self.dev is None:
-            fail("no loader on USB (1209:0001): Page Right at power-up, then "
-                 "dfu-util -d 1fc9:000c -a 0 -D tools/ramboot/firmware-ramboot.dfu")
+            fail("no loader on USB (1209:0001): put the unit in update mode (tools/hx_dfu_reboot.py, or the "
+                 "update-mode button at power-up), then dfu-util -d 1fc9:000c -a 0 -D tools/ramboot/firmware-ramboot.dfu "
+                 "(POD Go: firmware-ramboot-podgo.dfu)")
         try:
             self.dev.set_configuration()
         except Exception:
@@ -393,6 +443,83 @@ def cmd_run(args):
     print("[+] started: the loader has left USB. A power-cycle returns to the stock firmware.")
 
 
+def cmd_layout(args):
+    """Find where each stock entry's payload starts on the card (read only), for a unit whose
+    partition table no file gives (the POD Go). Each hit is checked over the entry's first
+    2,048 sectors (or all of it), so entries that begin alike are not confused. Saved after
+    every entry, so an interrupted run carries on."""
+    unit = unit_of(args.stock)
+    if unit not in LAYOUT_FILE:
+        fail(f"{unit}: its layout is built in; nothing to find")
+    stock = load(args.stock, stock=True, any_count=True)
+    n = len(stock)
+    path = LAYOUT_FILE[unit]
+    lay = json.load(open(path)) if os.path.exists(path) else {}
+    if lay.get("unit") != unit or len(lay.get("payload", [])) != n:
+        lay = {"unit": unit, "stock": os.path.basename(args.stock), "payload": [None] * n}
+    d = Loader()
+    if not d.info["flags"] & 2:
+        fail(f"the loader could not start the eMMC (status {d.info['emmc_status']:#x}): cannot look")
+    card = d.info["emmc_sectors"]
+    print(f"[+] eMMC: {card} sectors ({card * SECTOR / 2**30:.2f} GiB)")
+    nsec = [(len(e) + SECTOR - 1) // SECTOR for e in stock]
+    head = [zlib.crc32(e[:SECTOR].ljust(SECTOR, b"\0")) for e in stock]
+    tests = [0]
+
+    def is_entry(s, i):
+        if s < 0 or s + nsec[i] > card:
+            return False
+        tests[0] += 1
+        if d.emmc_crc(s, 1) != head[i]:
+            return False
+        c = min(len(stock[i]) // SECTOR, 2048)      # whole sectors only: a last partial one is
+        return c <= 1 or d.emmc_crc(s, c) == zlib.crc32(stock[i][:c * SECTOR])   # padded with old data
+
+    lo = 1
+    for i in range(n):
+        known = lay["payload"][i]
+        if known is not None and known >= lo and is_entry(known, i):
+            print(f"    entry {i:2d}: payload at sector {known:#x} (saved, checked)")
+            lo = known + nsec[i]
+            continue
+        if len(stock[i]) < SECTOR:                  # no whole sector to recognise it by
+            print(f"    entry {i:2d}: {len(stock[i])} bytes, smaller than a sector: skipped (never changed)")
+            continue
+        found = None
+        cands = []
+        if i < len(PART_START):
+            cands.append(PART_START[i] + 1)                  # where the Stomp has it
+        for step in (0x8000, 0x1000, 0x800, 0x400, 0x200, 0x100):
+            base = (lo + step - 1) // step * step
+            for k in range(64):
+                for extra in range(0, i + 3):
+                    cands.append(base + k * step + extra)
+        seen = set()
+        cands = sorted(c for c in cands if c >= lo and not (c in seen or seen.add(c)))
+        t0 = time.time()
+        for c in cands[:args.candidates]:
+            if is_entry(c, i):
+                found = c
+                break
+        if found is None:
+            print(f"    entry {i:2d}: not at a round address; scanning {args.scan:#x} sectors from {lo:#x}")
+            for s in range(lo, min(lo + args.scan, card)):
+                if (s - lo) % 4096 == 0:
+                    print(f"\r      at {s:#x} ({time.time() - t0:.0f} s)", end="", flush=True)
+                if is_entry(s, i):
+                    found = s
+                    break
+            print()
+        if found is None:
+            json.dump(lay, open(path, "w"), indent=1)
+            fail(f"entry {i}: not found from sector {lo:#x} (raise --scan); entries before it are saved in {path}")
+        lay["payload"][i] = found
+        json.dump(lay, open(path, "w"), indent=1)
+        print(f"    entry {i:2d}: payload at sector {found:#x} ({nsec[i]:#x} sectors; {time.time() - t0:.1f} s)")
+        lo = found + nsec[i]
+    print(f"[+] all {n} entries found ({tests[0]} reads); saved to {path}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -409,8 +536,12 @@ def main():
             p.add_argument("--no-emmc-check", action="store_true",
                            help="do not check that the eMMC holds the stock firmware first")
     sub.add_parser("info")
+    p = sub.add_parser("layout", help="find the stock entries on the card (POD Go), read only")
+    p.add_argument("--stock", required=True, help="the stock .hxf the unit holds")
+    p.add_argument("--candidates", type=int, default=20000, help="round sector numbers to try first")
+    p.add_argument("--scan", type=lambda v: int(v, 0), default=0x40000, help="sectors to scan one by one after that")
     args = ap.parse_args()
-    {"plan": cmd_plan, "run": cmd_run, "info": cmd_info}[args.cmd](args)
+    {"plan": cmd_plan, "run": cmd_run, "info": cmd_info, "layout": cmd_layout}[args.cmd](args)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,688 @@
+<title>POD Go NAM Converter</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one working column, a pedal-face strip on top, the converter first and the reference below it */
+:root {
+  --bg: #e9ebe8;          /* brushed aluminium */
+  --panel: #f6f7f5;
+  --ink: #1a1d1f;
+  --muted: #5d6468;
+  --rule: #c9cdca;
+  --accent: #c2410c;      /* amp-knob orange */
+  --accent-ink: #ffffff;
+  --lcd: #13262b;         /* the unit's screen */
+  --lcd-ink: #9fe3d6;
+  --ok: #2f7d4f;
+  --warn: #a15c07;
+  --bad: #b42318;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15181a; --panel: #1d2124; --ink: #e8ebe9; --muted: #9aa3a7; --rule: #343a3e;
+    --accent: #f0782f; --accent-ink: #1a0d05; --lcd: #0c1a1d; --lcd-ink: #8fd9cb;
+    --ok: #5cc28a; --warn: #e3a447; --bad: #f2786d; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15181a; --panel: #1d2124; --ink: #e8ebe9; --muted: #9aa3a7; --rule: #343a3e;
+  --accent: #f0782f; --accent-ink: #1a0d05; --lcd: #0c1a1d; --lcd-ink: #8fd9cb;
+  --ok: #5cc28a; --warn: #e3a447; --bad: #f2786d; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+}
+.wrap { max-width: 860px; margin: 0 auto; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 6vw, 46px); font-weight: 800; font-stretch: 85%; letter-spacing: -0.01em; line-height: 1.02; }
+h2 { font-size: 22px; font-weight: 700; font-stretch: 90%; }
+h3 { font-size: 16px; font-weight: 700; }
+p { margin: 0; max-width: 65ch; }
+.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.lead { color: var(--muted); font-size: 16px; }
+code, .mono { font-family: var(--mono); font-size: 0.92em; }
+
+/* the pedal-face strip: the unit's screen showing the block */
+.face { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px; align-items: end; }
+.lcd {
+  background: var(--lcd); color: var(--lcd-ink); border-radius: 6px; padding: 12px 14px;
+  font: 500 13px/1.35 var(--mono); min-width: 210px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+}
+.lcd b { display: block; font-size: 15px; color: #fff; letter-spacing: 0.02em; }
+.lcd .knobs { display: grid; grid-template-columns: repeat(3, auto); gap: 2px 14px; margin-top: 6px; opacity: 0.9; }
+@media (max-width: 560px) { .face { grid-template-columns: 1fr; } .lcd { min-width: 0; } }
+
+section { display: grid; gap: 14px; }
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; display: grid; gap: 14px; }
+
+/* drop zone */
+.drop {
+  border: 2px dashed var(--rule); border-radius: 10px; padding: 26px 18px; text-align: center;
+  display: grid; gap: 8px; justify-items: center; cursor: pointer; background: var(--bg);
+  transition: border-color .15s, background .15s;
+}
+.drop:hover, .drop:focus-visible, .drop.over { border-color: var(--accent); outline: none; }
+.drop strong { font-family: var(--display); font-size: 19px; font-stretch: 90%; }
+.drop span { color: var(--muted); font-size: 14px; }
+.btn {
+  font: 600 14px/1 var(--body); border-radius: 7px; padding: 11px 16px; border: 1px solid var(--accent);
+  background: var(--accent); color: var(--accent-ink); cursor: pointer;
+}
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--rule); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* converted captures */
+.caps { display: grid; gap: 10px; }
+.cap {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; align-items: center;
+  border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; background: var(--panel);
+  border-left: 4px solid var(--ok);
+}
+.cap.bad { border-left-color: var(--bad); }
+.cap.example { border-left-color: var(--rule); border-style: dashed; border-left-style: solid; }
+.cap .name { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+.cap .meta { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; min-width: 0; }
+.cap .err { color: var(--bad); font-size: 13px; }
+.slot { display: grid; gap: 4px; justify-items: end; text-align: right; }
+.slot label { font: 500 11px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.slot input { width: 72px; font: 500 16px/1 var(--mono); padding: 6px 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); color: var(--ink); text-align: right; }
+.model { font: 500 13px/1.2 var(--mono); }
+.model b { color: var(--accent); font-size: 16px; }
+.tag { font: 500 11px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--rule); border-radius: 4px; padding: 3px 5px; }
+@media (max-width: 520px) { .cap { grid-template-columns: 1fr; } .slot { justify-items: start; text-align: left; } }
+.status { font-size: 14px; color: var(--muted); min-height: 1.4em; }
+.status.ok { color: var(--ok); } .status.bad { color: var(--bad); }
+
+/* steps */
+ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: grid; gap: 14px; }
+ol.steps > li { counter-increment: s; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; }
+ol.steps > li::before {
+  content: counter(s); font: 700 15px/32px var(--display); text-align: center; width: 32px; height: 32px;
+  border-radius: 50%; border: 2px solid var(--accent); color: var(--accent);
+}
+ol.steps > li > div { display: grid; gap: 4px; min-width: 0; }
+ol.steps p { color: var(--muted); }
+ol.steps ul { margin: 2px 0 0; padding-left: 18px; color: var(--muted); }
+
+/* tables */
+.tbl { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font: 500 11px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+td.num, th.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.slotgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+.slotgrid div { font: 13px/1.3 var(--mono); font-variant-numeric: tabular-nums; border: 1px solid var(--rule); border-radius: 6px; padding: 5px 8px; display: flex; justify-content: space-between; gap: 6px; background: var(--panel); }
+.slotgrid div span:last-child { color: var(--accent); font-weight: 500; }
+.note { border-left: 3px solid var(--warn); padding: 4px 0 4px 12px; color: var(--muted); }
+.note strong { color: var(--ink); }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.two > div { min-width: 0; display: grid; gap: 6px; align-content: start; }
+footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-top: 1px solid var(--rule); padding-top: 16px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="face">
+    <div style="display:grid; gap:10px; min-width:0">
+      <div class="eyebrow"><a href="./" style="color:inherit">NAM A2 Lite for POD Go</a> · converter</div>
+      <h1>Turn NAM captures into POD Go IRs</h1>
+      <p class="lead">Drop in your <span class="mono">.nam</span> files. Each one comes out as a small <span class="mono">.wav</span> that you import with POD Go Edit like any IR, then pick with the NAM block's Model knob. Everything runs in this page; nothing is uploaded.</p>
+    </div>
+    <div class="lcd" aria-label="What the block looks like on the POD Go">
+      <b>NAM A2 Lite</b>
+      <div class="knobs"><span>Input 5.0</span><span>Bass 5.0</span><span>Mid 5.0</span><span>Treble 5.0</span><span>Hi Cut 10</span><span>Output 5.0</span><span>Model 0.3</span><span>MidFrq</span><span>Q</span></div>
+    </div>
+  </header>
+
+  <section aria-labelledby="conv-h">
+    <h2 id="conv-h">Convert</h2>
+    <div class="panel">
+      <label class="drop" id="drop" tabindex="0" for="pick">
+        <strong>Drop .nam files here</strong>
+        <span>or click to choose. A2 Lite captures at 48 kHz; a file that holds several sizes gives its A2 Lite part.</span>
+      </label>
+      <input type="file" id="pick" accept=".nam,application/json" multiple hidden>
+      <div class="caps" id="caps"></div>
+      <div class="row">
+        <button class="btn" id="save" disabled>Download converted files</button>
+        <button class="btn ghost" id="clear" disabled>Clear list</button>
+      </div>
+      <div class="status" id="status" role="status"></div>
+    </div>
+    <p class="note"><strong>Pick a slot for each capture now.</strong> The slot you type is only a reminder: the file goes into whichever IR slot you drop it on in POD Go Edit. The Model value next to it is what you then set on the NAM block. Use slots 1 to 101; the Model knob cannot reach 102 to 128.</p>
+  </section>
+
+  <section aria-labelledby="load-h">
+    <h2 id="load-h">Put a capture on the POD Go</h2>
+    <ol class="steps">
+      <li><div><h3>Unzip the download</h3><p>Double-click the <span class="mono">.zip</span> (Mac or Windows). Each capture is a <span class="mono">… NAM.wav</span> file. The " NAM" at the end tells you later which IR slots hold captures.</p></div></li>
+      <li><div><h3>Import it in POD Go Edit</h3><p>Open POD Go Edit with the POD Go connected and open its IR list (the impulse responses, beside the preset list). Drag the <span class="mono">.wav</span> onto an empty slot, the slot you chose above. POD Go Edit stores the whole file; nothing is cut off.</p></div></li>
+      <li><div><h3>Choose NAM A2 Lite as the amp</h3><p>In a preset, select the amp block and choose <b>NAM A2 Lite</b>. It sits in the amp list where Line 6 Elektrik used to be.</p>
+        <ul><li>On the POD Go's screen it shows as NAM A2 Lite with its own knob names.</li><li>POD Go Edit still calls it "Line 6 Elektrik" and shows Elektrik's knob names. That's cosmetic: use the table below to know which is which.</li></ul></div></li>
+      <li><div><h3>Set Model to the slot</h3><p>Turn <b>Model</b> (Elektrik's Master) to the value shown for your slot: the slot number minus one, divided by ten. Slot 4 is 0.3, slot 12 is 1.1. A slot with no capture in it keeps the block silent.</p></div></li>
+      <li><div><h3>Turn the cab block off</h3><p>Most captures already include the speaker cab (look for "CAB" in the name). With the cab block on as well, you'd hear two cabs. For a capture made without a cab ("DI" or "amp only"), keep a cab or IR block on.</p></div></li>
+      <li><div><h3>Set the level and play</h3><p><b>Input</b> at 5.0 drives the capture as it was recorded. If a drive capture breaks up too little or too much, nudge Input: each 0.1 is 0.4 dB. <b>Output</b> sets the block's volume; captures that say how loud they are come out at about the same level.</p></div></li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="knobs-h">
+    <h2 id="knobs-h">Knobs: on the unit and in POD Go Edit</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>POD Go shows</th><th>POD Go Edit shows</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>Input</td><td>Drive</td><td>Level into the capture, ±20 dB; 5.0 = as recorded</td></tr>
+        <tr><td>Bass</td><td>Bass</td><td>Low shelf at 100 Hz, ±12 dB</td></tr>
+        <tr><td>Mid</td><td>Mid</td><td>Peak at Mid Freq, ±12 dB</td></tr>
+        <tr><td>Treble</td><td>Treble</td><td>Peak at 2.5 kHz, ±12 dB</td></tr>
+        <tr><td>High Cut</td><td>Presence</td><td>Top-end roll-off; 10 = open</td></tr>
+        <tr><td>Output</td><td>Ch Vol</td><td>Block volume; 5.0 = unity</td></tr>
+        <tr><td>Model</td><td>Master</td><td>Which IR slot to play (table below)</td></tr>
+        <tr><td>Mid Freq</td><td>Sag</td><td>Centre of the Mid knob, 150 Hz to 3 kHz</td></tr>
+        <tr><td>Q</td><td>Ripple</td><td>Width of the Mid peak: wide, medium, narrow</td></tr>
+        <tr><td>Polarity</td><td>Bias X</td><td>Flips the phase above 5.0; leave at 5.0 or below</td></tr>
+        <tr><td>(unused)</td><td>Bias</td><td>Does nothing</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section aria-labelledby="slots-h">
+    <h2 id="slots-h">Slot → Model value</h2>
+    <div class="slotgrid" id="slotgrid" aria-label="IR slot and the Model value that plays it"></div>
+  </section>
+
+  <section aria-labelledby="what-h">
+    <h2 id="what-h">What this mod is</h2>
+    <div class="two">
+      <div><h3>What it does</h3><p>It adds a Neural Amp Modeler block to the POD Go. NAM captures are AI models of real amps and pedals, made by players and shared on sites like TONE3000. This build runs the small "A2 Lite" size of model on the POD Go's own DSP, as an amp block, with the cab usually baked in. Normal amps, cabs, effects and IRs all keep working.</p></div>
+      <div><h3>How it works</h3><p>The POD Go can't load new files of its own kind, but it can store IRs. So each capture is packed into an IR-sized file: the converter writes the model's numbers into it, and the NAM block reads them back from the slot the Model knob picks. Played through the cab block, that file would sound like harsh noise, so keep captures and real IRs in separate slots.</p></div>
+      <div><h3>What it costs</h3><p>NAM takes about 28% of the POD Go's DSP, so the unit counts it as 2,850 of its 9,000 budget units, more than the amp it replaces. Drive before it and delay and reverb after it fit easily. POD Go Edit's DSP meter still uses Elektrik's lower figure; the unit's own limit is the real one.</p></div>
+      <div><h3>If something goes wrong</h3><p>Hold <b>Page &gt;</b> while powering on to enter update mode, then install the stock 2.50 firmware with Line 6 Updater. The mod never touches the bootloader, so this always works. Your presets and IRs stay.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Unofficial and experimental; not made or supported by Line 6 or Yamaha Guitar Group. The converter is the one from <a href="https://github.com/nocaseguy/hx-stomp-nam-lite">hx-stomp-nam-lite</a> by Derek Bui (GPL-3.0), unchanged except for its wording; it gives the same bytes as the build's own tool, checked against the captures running on the unit.</p>
+    <p>Captures it refuses: other NAM sizes (Standard, Lite, Feather, Nano, A2 Full), models trained at other sample rates, and anything that isn't a .nam file.</p>
+  </footer>
+</div>
+
+<script>
+// nam2ir-core.js - a NAM A2 Lite capture (.nam) as an HX Stomp User IR (.wav),
+// the same bytes as tools/nam2ir.py. Runs in the browser (window.NAM2IR) and
+// in Node (module.exports) for the check against the Python tool.
+//
+// The .wav is 2,048 samples, 48 kHz, mono, 32-bit float: a header (0.5, -0.5,
+// 3.0, a scale 2^e, 1871 / 1024, the input level, the loudness, 0), then the capture's 1,871 weights
+// in the order the kernel loads them, then their silence state (72 words), all
+// divided by 2^e so that every sample is within HX Edit's +-15.8 limit, then zeros.
+(function (root) {
+  "use strict";
+
+  var C = 3;
+  var HEAD_TAPS = 16;
+  var IR_SAMPLES = 2048;
+  var IR_LIMIT = 15.8489;           // HX Edit refuses a sample beyond +-24 dB
+  var KERNEL = [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 15, 15, 6, 6, 6, 6, 6, 6, 6];
+  var DILATION = [1, 3, 7, 17, 41, 101, 239, 1, 3, 7, 17, 41, 101, 239, 1, 13, 1, 3, 7, 17, 41, 101, 239];
+  var N_WEIGHTS = 1871;
+  var STOMP_DBU = 11.5;             // the Stomp's input at 0 dBFS, the firmware's: tools/sharc/nam_lite.py
+  var LOUD_REF = -18;               // IR word 6's reference and the firmware's target: tools/sharc/nam_lite.py
+  var LOUD_TARGET = -18;            // (the NAM plugin's Normalized level)
+
+  function same(a, b) {
+    return Array.isArray(a) && a.length === b.length && a.every(function (x, i) { return x === b[i]; });
+  }
+
+  // The 3-channel WaveNet in a parsed .nam: the file itself, or the matching
+  // submodel of a SlimmableContainer. Throws an Error that says what is wrong.
+  function pickModel(d) {
+    if (!d || typeof d !== "object" || !d.architecture) {
+      throw new Error("This is not a NAM model file: it has no architecture.");
+    }
+    var subs = d.architecture === "SlimmableContainer"
+      ? ((d.config && d.config.submodels) || []).map(function (s) { return s.model; })
+      : [d];
+    var seen = [];
+    for (var i = 0; i < subs.length; i++) {
+      var m = subs[i];
+      if (!m || m.architecture !== "WaveNet" || !m.config || !m.config.layers || !m.config.layers.length) {
+        if (m && m.architecture) seen.push(m.architecture);
+        continue;
+      }
+      var ch = m.config.layers[0].channels;
+      if (ch === C) return { model: m, slimmable: d.architecture === "SlimmableContainer" };
+      seen.push(ch + "-channel WaveNet");
+    }
+    throw new Error("No 3-channel A2 Lite model inside (found: " + (seen.join(", ") || "nothing usable") +
+                    "). NAM A2 Lite plays A2 Lite captures only.");
+  }
+
+  // What would make the kernel compute something else than this capture: the A2 shape,
+  // tools/sharc/nam_pack.py a2_mismatch() (NeuralAmpModelerCore's is_a2_shape, rule for rule).
+  function problems(m) {
+    var out = [];
+    var cfg = m.config;
+    var L = cfg.layers;
+    if (L.length !== 1) out.push(L.length + " layer arrays; A2 Lite has 1");
+    var l = L[0];
+    var off = function (v) { return v === undefined || v === null || v === false || (typeof v === "object" && !v.active); };
+    if (!(cfg.head === undefined || cfg.head === null) || !(cfg.condition_dsp === undefined || cfg.condition_dsp === null)) {
+      out.push("a post-stack head or a condition DSP");
+    }
+    if (typeof cfg.head_scale !== "number" || (cfg.in_channels !== undefined && cfg.in_channels !== 1)) out.push("no head_scale");
+    if (l.input_size !== 1 || l.condition_size !== 1) out.push("input_size and condition_size are not 1");
+    if (l.bottleneck !== C) out.push("bottleneck is not " + C);
+    if (!l.kernel_sizes || !l.dilations) out.push("no kernel sizes or dilations");
+    if (!Array.isArray(l.activation) || l.activation.length !== KERNEL.length) out.push("not one activation per layer");
+    if (l.gated === true) out.push("gated");
+    if (l.secondary_activation !== undefined && l.secondary_activation !== null &&
+        !(Array.isArray(l.secondary_activation) && l.secondary_activation.length === KERNEL.length &&
+          l.secondary_activation.every(function (x) { return x === null; }))) out.push("a secondary activation");
+    if (l.head1x1 && typeof l.head1x1 === "object" && l.head1x1.active) out.push("head1x1 is on");
+    if (!l.layer1x1 || !l.layer1x1.active || (l.layer1x1.groups !== undefined && l.layer1x1.groups !== 1)) out.push("layer1x1 is not on with groups 1");
+    var h = l.head;
+    if (!h || h.out_channels !== 1 || h.kernel_size !== HEAD_TAPS || (h.head_dilation !== undefined && h.head_dilation !== 1) || !h.bias) {
+      out.push("the head is not " + HEAD_TAPS + " taps with a bias");
+    }
+    ["conv_pre_film", "conv_post_film", "input_mixin_pre_film", "input_mixin_post_film", "activation_pre_film",
+     "activation_post_film", "layer1x1_post_film", "head1x1_post_film"].forEach(function (k) {
+      if (!off(l[k])) out.push("FiLM (" + k + ")");
+    });
+    if ((l.groups_input !== undefined && l.groups_input !== 1) || (l.groups_input_mixin !== undefined && l.groups_input_mixin !== 1)) {
+      out.push("grouped convolutions");
+    }
+    if (l.slimmable !== undefined && l.slimmable !== null) out.push("slimmable layers");
+    if (l.kernel_sizes && !same(l.kernel_sizes, KERNEL)) out.push("kernel sizes differ from A2's");
+    if (l.dilations && !same(l.dilations, DILATION)) out.push("dilations differ from A2's");
+    (l.activation || []).forEach(function (a, i) {
+      if (!a || typeof a !== "object" || a.type !== "LeakyReLU" || !(Math.abs((a.negative_slope || 0) - 0.01) <= 1e-7)) {
+        out.push("layer " + (i + 1) + " uses " + (a && a.type) + "; the kernel has LeakyReLU 0.01");
+      }
+    });
+    (l.gating_mode || []).forEach(function (g, i) {
+      if (g !== "none") out.push("layer " + (i + 1) + " is gated");
+    });
+    if (l.gating_mode !== undefined && l.gating_mode !== null &&
+        !(Array.isArray(l.gating_mode) && l.gating_mode.length === KERNEL.length)) out.push("not one gating mode per layer");
+    if (!Array.isArray(m.weights) || m.weights.length !== N_WEIGHTS) {
+      out.push((m.weights ? m.weights.length : 0) + " weights; A2 Lite has " + N_WEIGHTS);
+    }
+    return out;
+  }
+
+  // The capture's input level in dBu (metadata input_level_dbu), or null when
+  // the file does not give a number: tools/sharc/nam_pack.py input_level_dbu().
+  function inputLevelDbu(meta) {
+    var dbu = meta && meta.input_level_dbu;
+    return typeof dbu === "number" && isFinite(dbu) ? dbu : null;
+  }
+
+  // The capture's loudness in dB (metadata loudness), or null: nam_pack.py loudness().
+  function loudness(meta) {
+    var x = meta && meta.loudness;
+    return typeof x === "number" && isFinite(x) ? x : null;
+  }
+
+  // IR word 6: tools/sharc/nam_lite.py loud_word(); 0 (left as it is) when too quiet.
+  function loudWord(db) {
+    if (db === null) return 0;
+    var g = Math.fround(Math.pow(10, (LOUD_REF - db) / 20));
+    return g > 0 && g < IR_LIMIT ? g : 0;
+  }
+
+  // IR word 5: tools/sharc/nam_lite.py level_word().
+  function levelWord(dbu) {
+    if (dbu === null) return 0;
+    var g = Math.fround(Math.pow(10, -dbu / 20));
+    if (!(g > 0 && g < IR_LIMIT)) throw new Error("Input level " + dbu + " dBu is out of range (above -24 dBu).");
+    return g;
+  }
+
+  // tools/sharc/nam_lite.py layer_weights(): per layer bias and mix-in per
+  // output channel, the taps [tap][input][output], then per output channel
+  // bias1 and its 1x1 weights; the head (bias, then [tap][channel]); the
+  // rechannel weights; the head scale.
+  function layerWeights(w) {
+    var o = C, blocks = [];
+    KERNEL.forEach(function (k) {
+      var conv = o; o += C * C * k;
+      var bias = o; o += C;
+      var mixin = o; o += C;
+      var w1 = o; o += C * C;
+      var b1 = o; o += C;
+      var blk = [], i, j, t;
+      for (i = 0; i < C; i++) blk.push(w[bias + i], w[mixin + i]);
+      for (t = 0; t < k; t++) for (j = 0; j < C; j++) for (i = 0; i < C; i++) blk.push(w[conv + (i * C + j) * k + t]);
+      for (i = 0; i < C; i++) {
+        blk.push(w[b1 + i]);
+        for (j = 0; j < C; j++) blk.push(w[w1 + i * C + j]);
+      }
+      blocks.push(blk);
+    });
+    var head = [w[o + C * HEAD_TAPS]];
+    for (var t = 0; t < HEAD_TAPS; t++) for (var j = 0; j < C; j++) head.push(w[o + j * HEAD_TAPS + t]);
+    return { blocks: blocks, head: head, rech: w.slice(0, C), scale: w[o + C * HEAD_TAPS + 1] };
+  }
+
+  // tools/sharc/nam_lite.py silence(): what the rings hold after silence, in
+  // float32 op for op as the kernel adds: the head's input (3) and each layer's
+  // input x (23 x 3). A change of model fills the rings with it, so it does not pop.
+  function silence(w) {
+    var f = Math.fround;
+    var lw = layerWeights(w.map(f));
+    var x = lw.rech.map(function (r) { return f(r * 0); });
+    var hs = [0, 0, 0], xs = [];
+    KERNEL.forEach(function (k, n) {
+      var blk = lw.blocks[n], a = [], i, j, t;
+      xs.push(x.slice());
+      for (i = 0; i < C; i++) {
+        var v = f(f(blk[2 * i] + f(blk[2 * i + 1] * 0)) + 0);
+        for (t = 0; t < k; t++) for (j = 0; j < C; j++) v = f(v + f(blk[2 * C + (t * C + j) * C + i] * x[j]));
+        a.push(Math.max(v, f(v * f(0.01))));
+      }
+      hs = hs.map(function (h, i) { return f(h + a[i]); });
+      var o = 2 * C + k * C * C;
+      for (i = 0; i < C; i++) {
+        var u = blk[o + 4 * i];
+        for (j = 0; j < C; j++) u = f(u + f(a[j] * blk[o + 4 * i + 1 + j]));
+        x[i] = f(x[i] + u);
+      }
+    });
+    return { hs: hs, xs: xs };
+  }
+
+  // The words a model loads as: the 1,871 weights, then its silence state
+  // (72 words, each / 16, as the kernel keeps them).
+  function stream(w) {
+    var lw = layerWeights(w);
+    var out = lw.rech.concat(lw.head, [lw.scale]);
+    lw.blocks.forEach(function (b) { out = out.concat(b); });
+    var s = silence(w);
+    s.xs.forEach(function (x) { s.hs = s.hs.concat(x); });
+    return out.concat(s.hs.map(function (v) { return v / 16; }));
+  }
+
+  // The 2,048 IR samples as a Float32Array, and the scale exponent.
+  function irSamples(w, dbu, loud) {
+    var st = stream(w);
+    var peak = 0;
+    st.forEach(function (x) { peak = Math.max(peak, Math.abs(x)); });
+    var e = 0;
+    while (peak / Math.pow(2, e) > 15.5) e++;
+    var s = Math.pow(2, e);
+    var vals = [0.5, -0.5, C, s, N_WEIGHTS / 1024, levelWord(dbu === undefined ? null : dbu),
+                loudWord(loud === undefined ? null : loud), 0].concat(st.map(function (x) { return x / s; }));
+    if (vals.length >= IR_SAMPLES) throw new Error("Too many weights for one IR slot.");
+    vals.forEach(function (v) {
+      if (!(Math.abs(v) < IR_LIMIT)) throw new Error("A sample HX Edit would refuse (" + v + ").");
+    });
+    var out = new Float32Array(IR_SAMPLES);
+    out.set(vals);
+    return { samples: out, exponent: e, peak: peak };
+  }
+
+  // A 48 kHz mono IEEE-float .wav, as tools/nam2ir.py write_wav().
+  function wavBytes(samples) {
+    var n = samples.length, buf = new ArrayBuffer(44 + 4 * n), v = new DataView(buf);
+    function tag(o, s) { for (var i = 0; i < 4; i++) v.setUint8(o + i, s.charCodeAt(i)); }
+    tag(0, "RIFF"); v.setUint32(4, 36 + 4 * n, true); tag(8, "WAVE");
+    tag(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 3, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 48000, true); v.setUint32(28, 48000 * 4, true); v.setUint16(32, 4, true); v.setUint16(34, 32, true);
+    tag(36, "data"); v.setUint32(40, 4 * n, true);
+    for (var i = 0; i < n; i++) v.setFloat32(44 + 4 * i, samples[i], true);
+    return new Uint8Array(buf);
+  }
+
+  // "Mesa Boogie" + "Mesa Boogie JP-2C" -> "Mesa Boogie JP-2C"; unset fields left out.
+  function gearName(make, model) {
+    var ok = function (x) { return typeof x === "string" && x && x !== "t3k-unset"; };
+    if (!ok(make)) return ok(model) ? model : "";
+    if (!ok(model)) return make;
+    return model.toLowerCase().indexOf(make.toLowerCase()) === 0 ? model : make + " " + model;
+  }
+
+  // Text of a .nam file -> { wav, info } or an Error thrown. opts: level: false
+  // to leave the input level out (word 5 0: no trim); loudness: false to leave the
+  // loudness out (word 6 0: as it comes out).
+  function convert(text, opts) {
+    opts = opts || {};
+    var d;
+    try { d = JSON.parse(text); } catch (err) { throw new Error("The file is not valid JSON, so not a .nam file."); }
+    var pick = pickModel(d);
+    var bad = problems(pick.model);
+    if (bad.length) throw new Error("Not an A2 Lite capture the kernel can run: " + bad.join("; ") + ".");
+    var meta = d.metadata || {};
+    [d.sample_rate, pick.model.sample_rate].forEach(function (rate) {
+      if (rate !== undefined && rate !== null && rate !== 48000) {
+        throw new Error("Trained at " + rate + " Hz; the POD Go runs at 48 kHz and does not resample, so it would sound off.");
+      }
+    });
+    var dbu = opts.level === false ? null : inputLevelDbu(meta);
+    var loud = opts.loudness === false ? null : loudness(meta);
+    var ir = irSamples(pick.model.weights, dbu, loud);
+    var rate = pick.model.sample_rate || d.sample_rate;
+    return {
+      wav: wavBytes(ir.samples),
+      info: {
+        name: meta.name || "",
+        modeledBy: meta.modeled_by || "",
+        gear: gearName(meta.gear_make, meta.gear_model),
+        slimmable: pick.slimmable,
+        exponent: ir.exponent,
+        peak: ir.peak,
+        inputDbu: dbu,
+        trimDb: dbu === null ? null : STOMP_DBU - dbu,
+        loudness: loud,
+        loudDb: loud === null || !loudWord(loud) ? null : LOUD_TARGET - loud,
+        sampleRate: rate,
+        warnings: []
+      }
+    };
+  }
+
+  var api = { STOMP_DBU: STOMP_DBU, LOUD_TARGET: LOUD_TARGET, convert: convert, pickModel: pickModel, problems: problems, irSamples: irSamples, wavBytes: wavBytes };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.NAM2IR = api;
+})(this);
+
+</script>
+<script>
+(function () {
+  "use strict";
+  var caps = [];               // {file, name, wav (Uint8Array), info, slot, error}
+  var $ = function (id) { return document.getElementById(id); };
+  var capsEl = $("caps"), statusEl = $("status"), saveBtn = $("save"), clearBtn = $("clear");
+  var downloads = null;        // the artifact viewer's save, when this page runs there
+  var inViewer = !!(window.claude && window.claude.use);
+  if (inViewer) {
+    window.claude.use("downloads").then(function (d) { downloads = d; render(); });
+  }
+
+  function modelValue(slot) { return ((slot - 1) / 10).toFixed(1); }
+  function baseName(f) { return f.replace(/\.nam$/i, ""); }
+  function wavName(c) { return baseName(c.file) + " NAM.wav"; }
+
+  // slot grid
+  var g = $("slotgrid"), frag = document.createDocumentFragment();
+  for (var s = 1; s <= 101; s++) {
+    var d = document.createElement("div");
+    d.innerHTML = "<span>Slot " + s + "</span><span>" + modelValue(s) + "</span>";
+    frag.appendChild(d);
+  }
+  g.appendChild(frag);
+
+  function nextSlot() {
+    var used = caps.filter(function (c) { return !c.error && !c.example; }).map(function (c) { return c.slot; });
+    for (var s = 1; s <= 101; s++) if (used.indexOf(s) < 0) return s;
+    return 101;
+  }
+
+  function describe(info) {
+    var bits = [];
+    if (info.gear) bits.push(info.gear);
+    if (info.modeledBy) bits.push("by " + info.modeledBy);
+    if (info.inputDbu !== null && info.inputDbu !== undefined) {
+      var t = info.trimDb;
+      bits.push("recorded at " + (info.inputDbu > 0 ? "+" : "") + info.inputDbu + " dBu, input trimmed " + (t > 0 ? "+" : "") + t.toFixed(1) + " dB");
+    } else bits.push("no input level in the file: plays untrimmed");
+    if (info.loudDb !== null && info.loudDb !== undefined) bits.push("volume matched " + (info.loudDb > 0 ? "+" : "") + info.loudDb.toFixed(1) + " dB");
+    return bits.join(" · ");
+  }
+
+  function render() {
+    capsEl.textContent = "";
+    var list = caps.length ? caps : [{ example: true, file: "My Clean Amp CAB.nam", slot: 4,
+      info: { gear: "", modeledBy: "", inputDbu: 15, trimDb: -3.5, loudDb: 3.8 } }];
+    list.forEach(function (c, i) {
+      var el = document.createElement("div");
+      el.className = "cap" + (c.error ? " bad" : "") + (c.example ? " example" : "");
+      var left = document.createElement("div");
+      left.style.minWidth = "0"; left.style.display = "grid"; left.style.gap = "3px";
+      var nm = document.createElement("div"); nm.className = "name";
+      nm.textContent = c.example ? wavName(c) : (c.error ? c.file : wavName(c));
+      left.appendChild(nm);
+      var mt = document.createElement("div");
+      if (c.error) { mt.className = "err"; mt.textContent = c.error; }
+      else { mt.className = "meta"; mt.textContent = (c.example ? "Example: your files appear here. " : "") + describe(c.info); }
+      left.appendChild(mt);
+      el.appendChild(left);
+      if (!c.error) {
+        var right = document.createElement("div"); right.className = "slot";
+        var id = "slot-" + i;
+        var lab = document.createElement("label"); lab.setAttribute("for", id); lab.textContent = "IR slot";
+        var inp = document.createElement("input"); inp.type = "number"; inp.min = 1; inp.max = 101; inp.id = id; inp.value = c.slot;
+        inp.disabled = !!c.example;
+        var mv = document.createElement("div"); mv.className = "model";
+        mv.innerHTML = "Model <b>" + modelValue(c.slot) + "</b>";
+        inp.addEventListener("input", function () {
+          var v = Math.max(1, Math.min(101, parseInt(inp.value, 10) || 1));
+          c.slot = v; mv.innerHTML = "Model <b>" + modelValue(v) + "</b>";
+        });
+        if (c.example) { var tg = document.createElement("span"); tg.className = "tag"; tg.textContent = "example"; right.appendChild(tg); }
+        right.appendChild(lab); right.appendChild(inp); right.appendChild(mv);
+        el.appendChild(right);
+      }
+      capsEl.appendChild(el);
+    });
+    var good = caps.filter(function (c) { return !c.error; });
+    saveBtn.disabled = !good.length || (inViewer && !downloads);
+    saveBtn.textContent = good.length > 1 || inViewer ? "Download " + (good.length || "") + " converted file" + (good.length === 1 ? "" : "s") + (inViewer ? " (.zip)" : "") : "Download converted file";
+    clearBtn.disabled = !caps.length;
+  }
+
+  function addFiles(files) {
+    var pending = Array.prototype.slice.call(files);
+    if (!pending.length) return;
+    var done = 0;
+    pending.forEach(function (f) {
+      var r = new FileReader();
+      r.onload = function () {
+        var c = { file: f.name, slot: 0 };
+        try {
+          var out = NAM2IR.convert(String(r.result));
+          c.wav = out.wav instanceof Uint8Array ? out.wav : new Uint8Array(out.wav);
+          c.info = out.info;
+          c.slot = nextSlot();
+        } catch (e) {
+          c.error = e && e.message ? e.message : String(e);
+        }
+        caps.push(c);
+        done++;
+        if (done === pending.length) {
+          var ok = caps.filter(function (x) { return !x.error; }).length;
+          var bad = caps.length - ok;
+          statusEl.className = "status " + (bad ? "bad" : "ok");
+          statusEl.textContent = ok + " converted" + (bad ? ", " + bad + " could not be converted (reason shown)" : "") + ".";
+          render();
+        }
+      };
+      r.onerror = function () { caps.push({ file: f.name, error: "This file could not be read." }); render(); };
+      r.readAsText(f);
+    });
+  }
+
+  // a stored (uncompressed) zip
+  var CRC = (function () { var t = new Uint32Array(256); for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(b) { var c = 0xFFFFFFFF; for (var i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function zip(entries) {
+    var enc = new TextEncoder(), parts = [], central = [], off = 0;
+    entries.forEach(function (e) {
+      var name = enc.encode(e.name), data = e.data, crc = crc32(data);
+      var h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true);
+      h.setUint16(8, 0, true); h.setUint16(10, 0, true); h.setUint16(12, 0x21, true);
+      h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true);
+      h.setUint16(26, name.length, true); h.setUint16(28, 0, true);
+      parts.push(new Uint8Array(h.buffer), name, data);
+      var c = new DataView(new ArrayBuffer(46));
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true);
+      c.setUint16(10, 0, true); c.setUint16(12, 0, true); c.setUint16(14, 0x21, true);
+      c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true);
+      c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+      central.push(new Uint8Array(c.buffer), name);
+      off += 30 + name.length + data.length;
+    });
+    var csize = central.reduce(function (n, p) { return n + p.length; }, 0);
+    var end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true);
+    end.setUint32(12, csize, true); end.setUint32(16, off, true);
+    return new Blob(parts.concat(central, [new Uint8Array(end.buffer)]), { type: "application/zip" });
+  }
+
+  function slotNote(good) {
+    return "IR slots and Model values (POD Go NAM A2 Lite)\r\n\r\n" + good.map(function (c) {
+      return "Slot " + c.slot + "  ->  Model " + modelValue(c.slot) + "   " + wavName(c);
+    }).join("\r\n") + "\r\n\r\nImport each .wav into its slot with POD Go Edit, choose NAM A2 Lite as the amp, set Model, cab block off.\r\n";
+  }
+
+  saveBtn.addEventListener("click", function () {
+    var good = caps.filter(function (c) { return !c.error; });
+    if (!good.length) return;
+    if (inViewer) {
+      if (!downloads) return;
+      var entries = good.map(function (c) { return { name: wavName(c), data: c.wav }; });
+      entries.push({ name: "Slots and Model values.txt", data: new TextEncoder().encode(slotNote(good)) });
+      var name = good.length === 1 ? baseName(good[0].file) + " NAM.zip" : "POD Go NAM captures.zip";
+      downloads.save({ filename: name, data: zip(entries) }).then(function () {
+        statusEl.className = "status ok"; statusEl.textContent = "Saved " + name + ". Unzip it, then import the .wav files with POD Go Edit.";
+      }, function (e) {
+        statusEl.className = "status bad";
+        statusEl.textContent = e && e.code === "declined" ? "Download cancelled." : "The download didn't start (" + ((e && e.code) || "unavailable") + ").";
+      });
+    } else {
+      good.forEach(function (c, i) {
+        setTimeout(function () {
+          var a = document.createElement("a");
+          a.href = URL.createObjectURL(new Blob([c.wav], { type: "audio/wav" }));
+          a.download = wavName(c); document.body.appendChild(a); a.click();
+          setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+        }, i * 400);
+      });
+      statusEl.className = "status ok"; statusEl.textContent = "Downloading " + good.length + " file" + (good.length === 1 ? "" : "s") + ".";
+    }
+  });
+  clearBtn.addEventListener("click", function () { caps = []; statusEl.textContent = ""; render(); });
+
+  var drop = $("drop"), pick = $("pick");
+  pick.addEventListener("change", function () { addFiles(pick.files); pick.value = ""; });
+  drop.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick.click(); } });
+  ["dragenter", "dragover"].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add("over"); }); });
+  ["dragleave", "drop"].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.remove("over"); }); });
+  drop.addEventListener("drop", function (e) { if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files); });
+  document.addEventListener("dragover", function (e) { e.preventDefault(); });
+  document.addEventListener("drop", function (e) { e.preventDefault(); });
+
+  render();
+})();
+</script>

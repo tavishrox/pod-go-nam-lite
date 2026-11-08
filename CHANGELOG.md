@@ -2,6 +2,18 @@
 
 Major changes, newest first. The repository has no version numbers, so each entry is dated and names its commit. Status labels follow the README: "ran on" means a person ran that build on that unit.
 
+
+## 2026-11-08: POD Go and POD Go Wireless (2.50)
+
+- `podgo/`: NAM A2 Lite for the POD Go, on Line 6 Elektrik's slot (`podgo/build_podgo.py`; guide `POD_GO.md`,
+  findings `docs/PODGO_PORT_MAP.md`). The kernel runs on each half of the POD Go's 32-sample calls
+  (`nam_multi.py --block32`); DSP cost measured on the unit (2,850 units; the DSP runs at 393.216 MHz).
+- RAM runs on the POD Go: `tools/hxf_ram.py` (POD Go layout and app), loader `firmware-ramboot-podgo.dfu`
+  (`make podgo`; CMD7 waits for its R1b busy on this unit's eMMC). `tools/l6ia.py` takes the POD Go's marker.
+- Converter page for the POD Go (`web/pod-go/`), NAM preset templates (`templates/`, `podgo/make_templates.py`),
+  a block helper for amps, cabs, IRs and FX loops in freed blocks (`podgo/blocks.py`), boot-screen images
+  (`podgo/splash.py`), and the preset sweep (`podgo/preset_sweep.py`).
+
 ## 2026-11-06
 
 - **Loudness normalisation.** The converter (`tools/nam2ir.py` and the web page) stores a capture's loudness in the `.wav`, and the amp brings its output to −18 dB, as the NAM plugin's Normalized mode does. `.wav` files from older converters play as before. A capture converted again plays at a new volume. The converter also refuses captures not trained at 48 kHz and models that aren't the A2 shape. Builds: HX Stomp a37659d0 (ran on an HX Stomp from RAM; test suite 48 pass, 0 fail, 1 skip), HX Stomp XL 8918ab60 (not run on an XL), HX Effects 2efb9879 (not run on an HX Effects).

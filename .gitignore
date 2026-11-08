@@ -10,3 +10,11 @@ __pycache__/
 .venv/
 .pytest_cache/
 !tools/ramboot/*.bin
+
+# POD Go: never publish Line 6 firmware, builds, artwork taken from it, recordings or captures
+*.hxf
+*.l6ia
+release/
+splash/
+*.nam
+*.wav

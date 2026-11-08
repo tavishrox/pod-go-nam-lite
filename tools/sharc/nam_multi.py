@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """NAM A2 Lite's kernel: up to three blocks at once, each with its own capture.
 
-usage: nam_multi.py [model.nam] [-o out.asm] [--slots 2|3] [--staging b2|b3] [--no-tone | --mid-sweep] [--effects] [--check]
+usage: nam_multi.py [model.nam] [-o out.asm] [--slots 2|3] [--staging b2|b3] [--no-tone | --mid-sweep] [--effects | --podgo] [--plexi] [--static-sdram] [--check]
 
 --mid-sweep: the ten-knob build's tone stack (Bass 150 Hz shelf, Mid a peak at Mid Freq with Q,
 Treble a 2.5 kHz peak, High Cut). --effects: the HX Effects 3.80.0's User IR store.
@@ -64,6 +64,11 @@ DDR2 = 0x324500
 DDR2_END = 0x328000
 IR_FLAG, IR_TOP = 0x2AB56E, 0x2ABDED
 IR_EFFECTS = (0x2A912C, 0x2A99AB)     # the HX Effects 3.80.0's User IR store (--effects)
+# The POD Go 2.50 (--podgo; docs/PODGO_PORT_MAP.md): its User IR store (flags 0x26758e, pool
+# 0x26760e.., slot 0's top 0x267e0d, the same shape as the Stomp's), and the shared table moved
+# to SDRAM no constant of its DSP program names (0x324500 is inside its 0x310000 heap there).
+IR_PODGO = (0x26758E, 0x267E0D)
+DDR2_PODGO = (0x2F8000, 0x2FC000)   # top of the gap, below the DSP's external code at 0x300000
 N_STREAM = nam_lite.N_WEIGHTS + C * (1 + NL)        # 1,943: weights, then the silence state
 HIST_N = 512
 MAGIC = 0x6E6D6D31                # "nmm1": the report's word 0 and the read chains' sentinel
@@ -151,7 +156,7 @@ def names():
         "SDR_NEED", "DM_BASE", "PM_BASE", "MAGIC", "POLLMAX", "LPOLLMAX", "BACKOFF_N", "T_MAX", "N_STREAM", "KM1", "T_SIZE",
         "TCB_EI", "TCB_IC", "TCB_II", "IR_FLAG", "IR_TOP", "DMAC0", "EIEP0", "EMEP0", "ICEP0", "IIEP0", "IMEP0",
         "CPEP0", "DFLSH", "DEN_CHEN", "TRAN", "BUSYM", "EXTSM", "EP0IMSK", "HXK_ENTRY_INST", "HXK_INST_SDRAM",
-        "HXK_INST_SDRAM_END", "COLD_PM", "WBUF", "HEADL"]
+        "HXK_INST_SDRAM_END", "COLD_PM", "WBUF", "HEADL", "STATIC_SDR", "WRAP32"]
 
 
 def equs(v):
@@ -316,7 +321,8 @@ class Layout:
         self.sdr_need = self.sent_off + 2
         # DDR2 (shared): the tone stack's table
         self.eq_tab = DDR2
-        self.stomp_gain = self.eq_tab + 4 * 101 * 5      # 10^(STOMP_DBU/20) (nam_lite.py)
+        self.stomp_gain = self.eq_tab + 4 * 101 * 5 + (101 if PLEXI else 0)  # 10^(STOMP_DBU/20) (nam_lite.py);
+        # (plexi: after the Hz table)
         self.loud_gain = self.stomp_gain + 1               # 10^((LOUD_TARGET - LOUD_REF)/20)
         self.ddr2_to = self.loud_gain + 1
         assert self.ddr2_to <= DDR2_END
@@ -333,7 +339,8 @@ class Layout:
                  TCB_II=TCB_II, IR_FLAG=IR_FLAG, IR_TOP=IR_TOP, DMAC0=DMAC0, EIEP0=EIEP0, EMEP0=EMEP0,
                  ICEP0=ICEP0, IIEP0=IIEP0, IMEP0=IMEP0, CPEP0=CPEP0, DFLSH=DFLSH, DEN_CHEN=DEN | CHEN, TRAN=TRAN,
                  BUSYM=DEN | DMAS | CHS | EXTS, EXTSM=EXTS, EP0IMSK=EP0IMSK, HXK_ENTRY_INST=2, HXK_INST_SDRAM=6,
-                 HXK_INST_SDRAM_END=7)
+                 HXK_INST_SDRAM_END=7, STATIC_SDR=STATIC_SDR, WRAP32=WRAP32)
+        assert not STATIC or self.sdram_words() <= STATIC_STRIDE
         self.v = v
 
     def sdram_words(self):
@@ -450,6 +457,7 @@ class Layout:
         sb = (self.sb[0], self.sb[0] + 2 * SB_WORDS)
         xhi = [(self.xhi, self.xhi + XHI)] if self.xhi_b2 else []
         xhi += [(self.wbuf, self.wbuf + WBUF_N)] if self.wbuf_b2 else []
+        xhi += [(WRAP32, WRAP32 + 3)] if BLOCK32 else []
         return [sb, (B3, self.b3_to), (DDR2, self.ddr2_to), (DMAC0, DMAC0 + 1), (EIEP0, CPEP0 + 1)] + xhi
 
     def v_x(self):
@@ -645,6 +653,32 @@ SIN_C = (-1.0 / 5040, 1.0 / 120, -1.0 / 6)
 COS_C = (1.0 / 40320, -1.0 / 720, 1.0 / 24, -0.5)
 MID_TEST = {(0.8, 0.3, 0.6, 0.2): (1800.0, 1), (0.3, 0.7, 0.45, 0.9): (120.0, 2), (0.5, 0.5, 0.5, 0.5): (650.0, 0)}
 
+# plexi (--plexi, with --mid-sweep; the POD Go build on Brit Plexi Brt's identity, docs/PODGO_PORT_MAP.md):
+# every knob is a float 0..1, as POD Go Edit's Brit Plexi Brt has them, so the editor keeps NAM
+# blocks and their values. The kernel decodes four of them: Model (Master, DM 7) slot =
+# TRUNC(100 v + 0.5) + 1 (the unit's amp knobs step by 0.01: slots 1..101); Mid Freq (Sag, DM 19)
+# a 101-step log table 150..3000 Hz (HZ_OFF in EQ_TAB); Q (Hum, DM 20) TRUNC(3 v), clamped 0..2;
+# Polarity (Ripple, DM 15) inverted above 0.5 (POD Go Edit's default for Ripple is 0.5: Normal).
+PLEXI = False
+# static SDRAM (--static-sdram; the POD Go: its Amp harness has no room to raise the model's SDRAM
+# above the stock 0x800 words, which hangs the unit at boot): kernel slot k's far rings, HIST and
+# sentinels at STATIC_SDR + k * STATIC_STRIDE, in SDRAM nothing else names, not the instance's block.
+STATIC = False
+STATIC_SDR, STATIC_STRIDE = 0x2E0000, 0x8000   # 3 slots: 0x2e0000..0x2f8000
+HZ_OFF = 4 * 505
+MID_TEST_PLEXI = {(0.8, 0.3, 0.6, 0.2): (0.83, 0.5), (0.3, 0.7, 0.45, 0.9): (0.0, 0.9), (0.5, 0.5, 0.5, 0.5): (0.48, 0.1)}
+
+
+def hz_table():
+    """(plexi) Mid Freq per Sag step 0..100: 150 Hz x 20^(step/100), float32 words."""
+    return [nam_pack.f2b(MID_HZ[0] * (MID_HZ[1] / MID_HZ[0]) ** (step / 100)) for step in range(101)]
+
+
+def plexi_mid(v_hz, v_q):
+    """(plexi) the kernel's decoding of Sag and Hum, in float32: (Hz, Q index)."""
+    step = min(100, max(0, int(f32(f32(f32(v_hz) * 100.0) + 0.5))))
+    return ssim.b2f(hz_table()[step]), min(2, max(0, int(f32(f32(v_q) * 3.0))))
+
 
 TREBLE = ("peak", 2500.0)                # (mid-sweep) Treble a peak (Q 0.7), not a shelf: Presence alone above ~5 kHz
 HICUT = (2000.0, 20000.0)               # (mid-sweep) Presence's knob is High Cut: a low-pass (Q 0.707) from
@@ -675,6 +709,8 @@ def eq_table_midq():
     tab[2 * 505: 3 * 505] = [nam_pack.f2b(x) for step in range(101)
                              for x in nam_lite.eq_coefficients(*TREBLE, (step - 50) * 0.24)]
     tab[3 * 505: 4 * 505] = [nam_pack.f2b(x) for step in range(101) for x in hicut_coefficients(step)]
+    if PLEXI:
+        tab = tab[:HZ_OFF] + hz_table()
     return tab
 
 
@@ -731,6 +767,14 @@ def _mid_src(src):
     sub = [
         "", "// ---- (mid-sweep) the Mid band: a peak at Mid Freq with Q, from F10 (Mid), F11 (Hz), R12 (Q)",
         "mid_eq:",
+    ] + ([
+        "    F0 = 3.0;                          // (plexi) Hum 0..1 -> Q index by thirds",
+        "    F12 = F12 * F0;", "    R12 = TRUNC F12;",
+        "    F0 = 100.0;                        // (plexi) Sag 0..1 -> Mid Freq from the Hz table",
+        "    F11 = F11 * F0;", "    F0 = 0.5;", "    F11 = F11 + F0;", "    R0 = TRUNC F11;",
+        "    R1 = 0;", "    R0 = MAX(R0, R1);", "    R1 = 100;", "    R0 = MIN(R0, R1);",
+        f"    R1 = EQ_TAB + {HZ_OFF};", "    R0 = R0 + R1;", "    I2 = R0;", "    F11 = DM(0, I2);",
+    ] if PLEXI else []) + [
         "    F0 = 100.0;", "    F0 = F10 * F0;", "    F1 = 0.5;", "    F0 = F0 + F1;", "    R0 = TRUNC F0;",
         "    R1 = 0;", "    R0 = MAX(R0, R1);", "    R1 = 100;", "    R0 = MIN(R0, R1);",
         "    R0 = R0 + R0;", f"    R1 = EQ_TAB + {MID_OFF};", "    R0 = R0 + R1;", "    I2 = R0;",
@@ -763,21 +807,123 @@ def _mid_src(src):
     return src + "\n".join(sub)
 
 
+# The period meter (build(meter=4), a test image only): every block plays the cycles (EMUCLK) from
+# the previous call's start to this call's start x 0.25 / 150,000 instead of its output. With
+# --block32 the halves alternate (half-call time, then period - that): a pair is one 32-sample
+# period, so the core clock = pair x 48000 / 32. DM(16, I0) keeps the last start (no knob writes it).
+METER_PERIOD_ENTRY = """    R0 = EMUCLK;                        // (meter 4) the cycles since the last call's start
+    R1 = DM(16, I0);
+    DM(16, I0) = R0;
+    R0 = R0 - R1;
+    DM(17, I0) = R0;
+"""
+METER_PERIOD_EXIT = """    R0 = DM(SAVE + 31);                 // (meter 4) the instance's I0
+    I4 = R0;
+    R0 = DM(17, I4);
+    F8 = FLOAT R0;
+    F1 = 1.6666667e-6;
+    F8 = F8 * F1;
+    I11 = B11;
+    LCNTR = 16, DO mt_l UNTIL LCE;
+mt_l: F8 = -F8, PM(I11, M9) = F8;
+"""
+
+
 def _variant(src, meter=False, nodma=False, prof=None):
+    if meter == 4:
+        src = src.replace("// METER_ENTRY\n", METER_PERIOD_ENTRY).replace("// METER_EXIT\n", METER_PERIOD_EXIT)
     if prof:
         src = _prof(src, *prof)
     elif meter == 2:
         src = src.replace("// METER_EXIT\n", METER_IDLE_EXIT)
     elif meter == 3:
         src = src.replace("// METER_EXIT\n", METER_POLLS_EXIT)
-    elif meter:
+    elif meter and meter != 4:
         src = src.replace("// METER_ENTRY\n", METER_ENTRY).replace("// METER_EXIT\n", METER_EXIT)
     for a, b in (NODMA if nodma else ()) + (NOTONE if NO_TONE else ()):
         assert src.count(a) == 1, a
         src = src.replace(a, b)
     if MIDQ:
         src = _mid_src(src)
+    if STATIC:
+        for a, b in STATIC_SRC:
+            assert src.count(a) == 1, a
+            src = src.replace(a, b)
+    if PLEXI:
+        for a, b in PLEXI_SRC:
+            assert src.count(a) == 1, a
+            src = src.replace(a, b)
+    if BLOCK32:
+        src = src.rstrip("\n") + "\n" + BLOCK32_SRC
     return _no_bands(src) if NO_TONE else src
+
+
+# 32-sample calls (--block32; the POD Go: its amp blocks are called with 32 samples, on the unit
+# 2026-11-08: a 16-sample kernel left every other 16 samples as the dry input). NAM_ENTRY32 runs
+# the 16-sample kernel on each half; the kernel leaves I1-I3 changed, so they are kept at WRAP32
+# (Block 3's top, above COLD_END, below the prof stamps).
+BLOCK32 = False
+WRAP32 = 0xE7FF0
+assert COLD_END <= WRAP32 and WRAP32 + 3 <= PROF_A
+BLOCK32_SRC = """
+// ---- (block32) a 32-sample call: the 16-sample kernel on each half
+NAM_ENTRY32:
+    DM(WRAP32 + 0) = I1;
+    DM(WRAP32 + 1) = I2;
+    DM(WRAP32 + 2) = I3;
+    CALL CUSTOM_AMP_ENTRY;
+    I1 = DM(WRAP32 + 0);
+    I2 = DM(WRAP32 + 1);
+    I3 = DM(WRAP32 + 2);
+    MODIFY(I1, 16);
+    MODIFY(I2, 16);
+    JUMP CUSTOM_AMP_ENTRY;              // its RTS returns to the caller
+"""
+
+STATIC_SRC = (
+    ("""    R0 = DM(HXK_ENTRY_INST, I3);
+    I5 = R0;
+    R1 = DM(HXK_INST_SDRAM, I5);
+    R2 = DM(HXK_INST_SDRAM_END, I5);
+    R2 = R2 - R1;
+    R3 = SDR_NEED;
+    COMP(R2, R3);
+    IF LT JUMP m_nosdr;
+""", """    R1 = DM(P_SLOT, I0);                // (static) slot k + 1: its own SDRAM at
+    R1 = R1 - 1;                        // STATIC_SDR + k * 0x8000
+    R1 = LSHIFT R1 BY 15;
+    R2 = STATIC_SDR;
+    R1 = R1 + R2;
+"""),
+)
+
+
+PLEXI_SRC = (
+    ("""    R1 = DM(P_PHASE, I0);               // Polarity: Inverted negates the level, so the
+    R1 = PASS R1;                       // head's output and all that follows it (the
+    IF NE F0 = -F0;                     // crossfade and the tone stack are linear)
+""", """    F1 = DM(P_PHASE, I0);               // (plexi) Polarity: Ripple above 0.5 (POD Go Edit's
+    F2 = 0.5;                           // default) negates the level, so the head's output and
+    COMP(F1, F2);                       // all that follows it (the crossfade and the tone stack
+    IF GT F0 = -F0;                     // are linear)
+"""),
+    ("""    R0 = DM(7, I0);
+    R1 = 0x800000;
+    COMP(R0, R1);
+    IF LT JUMP n_int;                   // an integer (a float >= 2^-126 is not)
+    R0 = TRUNC F0;
+n_int:
+    R1 = 1;
+    R0 = R0 - R1;
+""", """    F0 = DM(7, I0);                     // (plexi) Model: Master 0..1, index = TRUNC(100 v + 0.5)
+    F1 = 100.0;
+    F0 = F0 * F1;
+    F1 = 0.5;
+    F0 = F0 + F1;
+    R0 = TRUNC F0;
+    R0 = PASS R0;
+"""),
+)
 
 
 def build(slots=3, backoff=BACKOFF_N, staging="b2", meter=False, nodma=False, prof=None, wbuf=None):
@@ -944,7 +1090,8 @@ class Pipe:
                 break
             self.co.append([ssim.b2f(v) for v in tab[(band * 101 + i) * 5: (band * 101 + i) * 5 + 5]])
         if MIDQ:
-            self.co[1] = mid_coefficients(knobs[1], knobs[4], knobs[5])
+            hz, q = plexi_mid(knobs[4], knobs[5]) if PLEXI else (knobs[4], knobs[5])
+            self.co[1] = mid_coefficients(knobs[1], hz, q)
 
     def cut(self):
         self.mg = 0 if self.fresh else 17
@@ -1027,8 +1174,13 @@ class Inst:
     def knobs(self, drive=None, vol=None, model=None, eq=None, polarity=None):
         sim = self.rig.sim
         if polarity is not None:            # the raw word: 0/1, or a float's bits
-            self.polarity = polarity
-            sim.wr(self.i0 + P["P_PHASE"], polarity)
+            if PLEXI:                       # (plexi) a float 0..1: inverted above 0.5
+                v = f32(polarity)
+                self.polarity = v > 0.5
+                sim.wr(self.i0 + P["P_PHASE"], ssim.f2b(v))
+            else:
+                self.polarity = polarity
+                sim.wr(self.i0 + P["P_PHASE"], polarity)
         if drive is not None:
             self.drive = drive
             sim.wr(self.i0 + 5, ssim.f2b(drive))
@@ -1037,16 +1189,21 @@ class Inst:
             sim.wr(self.i0 + 6, ssim.f2b(vol))
         if model is not None:
             self.model = model
-            sim.wr(self.i0 + 7, model if isinstance(model, int) else ssim.f2b(model))
+            if PLEXI:                       # (plexi) slot s as Master (s - 1) / 100; 0 below the range
+                s = int(model)
+                sim.wr(self.i0 + 7, ssim.f2b((s - 1) / 100 if s >= 1 else -1.0))
+            else:
+                sim.wr(self.i0 + 7, model if isinstance(model, int) else ssim.f2b(model))
         if eq is not None:
             if MIDQ and len(eq) == 4:       # (mid-sweep: Mid Freq and Q with them)
-                eq = tuple(eq) + MID_TEST.get(tuple(eq), (650.0, 0))
+                eq = tuple(eq) + ((MID_TEST_PLEXI.get(tuple(eq), (0.48, 0.1))) if PLEXI else
+                                  MID_TEST.get(tuple(eq), (650.0, 0)))
             self.eq = eq
             for j, k in enumerate(eq[:4]):
                 sim.wr(self.i0 + 8 + j, ssim.f2b(k))
             if MIDQ:
                 sim.wr(self.i0 + 19, ssim.f2b(eq[4]))
-                sim.wr(self.i0 + 20, eq[5])
+                sim.wr(self.i0 + 20, ssim.f2b(eq[5]) if PLEXI else eq[5])
         sim.wr(self.i0 + 3, 1)
 
     def call(self, block, label):
@@ -1071,6 +1228,9 @@ class Rig:
             for x in range(a, b):
                 if x not in static:
                     sim.dm[x] = rnd.getrandbits(32)
+        if STATIC:                          # (static) every slot's SDRAM: stale words
+            for x in range(STATIC_SDR, STATIC_SDR + lay.slots * STATIC_STRIDE):
+                sim.dm[x] = rnd.getrandbits(32)
         sim.dm[DMAC0] = 0
         self.dma = ChainDma(sim, **dma)
         self.keep = [c for c in range(0x10, 0x50) if c not in (0x11, 0x12, 0x13, 0x1F)]
@@ -1083,10 +1243,11 @@ class Rig:
         return Inst(self, name, 0xB3000 + 0x400 * k + (k & 1), 0x91000 + 0x200 * k + (k & 1), 0xB6000 + 0x40 * k,
                     0x400000 + 0x10000 * k, self.lay.sdram_words())
 
-    def call(self, inst, block, label):
+    def call(self, inst, block, label, entry="CUSTOM_AMP_ENTRY"):
         sim, rnd = self.sim, self.rnd
         BI, BO = 0xB8000, 0xB8100
-        for k in range(16):
+        n = len(block)
+        for k in range(n):
             sim.wr(BI + k, block[k])
         for r in range(16):
             sim.setR(r, rnd.getrandbits(32))
@@ -1104,7 +1265,7 @@ class Rig:
         sim.u[ssim.U_MODE1] |= 0x1000000
         mode1 = sim.u[ssim.U_MODE1]
         before = ([sim.R(r) for r in range(16)], list(sim.alt[:16]), {c: sim.get(c) for c in self.keep})
-        cyc = sim.call(self.syms["CUSTOM_AMP_ENTRY"], limit=2_000_000)
+        cyc = sim.call(self.syms[entry], limit=4_000_000)
         self.dma.advance()
         self.n += 1
         self.cycles.append((label, cyc))
@@ -1123,7 +1284,7 @@ class Rig:
         if sim.rd(DMAC0) & DEN and not self.foreign:
             raise CheckFailed(f"{label}: returns with DMAC0 enabled")
         self.check_dma(inst, label)
-        return [sim.rd(BO + k) for k in range(16)]
+        return [sim.rd(BO + k) for k in range(n)]
 
     def rep(self):
         return [self.sim.rd(REP + k) for k in range(16)]
@@ -1133,6 +1294,9 @@ class Rig:
         (or, read only, the User IR slots), internal words in the
         module's memory."""
         sd = (inst.sdram, inst.sdram + self.lay.sdram_words())
+        if STATIC:                          # (static) the SDRAM of the slot the instance holds
+            k = self.sim.rd(inst.i0 + P["P_SLOT"]) - 1
+            sd = (STATIC_SDR + k * STATIC_STRIDE, STATIC_SDR + k * STATIC_STRIDE + self.lay.sdram_words())
         ir = (IR_TOP - 0x800 + 1, IR_TOP + 128 * 0x800)
         for out, ei, ii, n, em, im in self.dma.log:
             e0, e1 = sorted((ei, ei + (n - 1) * em))
@@ -1300,11 +1464,12 @@ class KernelCheck:
         """B's Polarity to Inverted (1, then a float 1.0's bits), then back to Normal:
         from the next block on its output is the reference with the sign flipped, through
         the tone stack; A, Normal, plays on unchanged."""
-        for pol, n in ((1, 4), (ssim.f2b(1.0), 3), (0, 4)):
+        for pol, n in (((1.0, 4), (0.5, 3), (0.51, 3), (0.0, 4)) if PLEXI else
+                       ((1, 4), (ssim.f2b(1.0), 3), (0, 4))):
             self.B.knobs(polarity=pol)
             for b in range(n):
                 self.play(self.A, "A")
-                self.play(self.B, f"B polarity {pol:#x}")
+                self.play(self.B, f"B polarity {pol}")
 
     def cab_ir_is_silent(self):
         """B to slot 5, an ordinary cab IR (Model 5.0 as a float): the tail fades out to silence."""
@@ -1467,16 +1632,45 @@ def check(asm, lay, w, **kw):
     k = KernelCheck(asm, lay, w, **kw)
     try:
         k.run()
+        if BLOCK32:
+            check_block32(asm, lay, w)
     except CheckFailed as e:
         return False, str(e), k
-    return True, k.summary(), k
+    res = k.summary()
+    if BLOCK32:
+        res["block32"] = "NAM_ENTRY32 on 32 samples = two 16-sample calls, bit for bit"
+    return True, res, k
+
+
+def check_block32(asm, lay, w, calls=120):
+    """(block32) Two rigs from the same seed: one calls the kernel twice per 16-sample half,
+    the other NAM_ENTRY32 once per 32 samples; A (the test model) and B (another capture,
+    other knobs) interleaved, from their first call (claim, load) on. Outputs bit for bit."""
+    ks = [KernelCheck(asm, lay, w), KernelCheck(asm, lay, w)]
+    insts = []
+    for k in ks:
+        a, b = k.rig.inst("A", 0), k.rig.inst("B", 1)
+        a.knobs(model=1)
+        b.knobs(drive=0.62, vol=0.7, model=3, eq=(0.3, 0.7, 0.45, 0.9))
+        insts.append((a, b))
+    sa, sb = ks[0].sig("A32", 2 * calls), ks[0].sig("B32", 2 * calls)
+    for c in range(calls):
+        for j, s in ((0, sa), (1, sb)):
+            x = s[2 * c] + s[2 * c + 1]
+            two = ks[0].rig.call(insts[0][j], x[:16], f"16+16 {c}") + ks[0].rig.call(insts[0][j], x[16:], f"16+16 {c}b")
+            one = ks[1].rig.call(insts[1][j], x, f"32 {c}", entry="NAM_ENTRY32")
+            if one != two:
+                bad = next(i for i in range(32) if one[i] != two[i])
+                raise CheckFailed(f"block32: call {c} instance {'AB'[j]}: sample {bad} differs")
+    if not any(v & 0x7FFFFFFF for v in one):
+        raise CheckFailed("block32: the last call is silent: the test played nothing")
 
 
 def main():
     slots = int(sys.argv[sys.argv.index("--slots") + 1]) if "--slots" in sys.argv else 3
     args = sys.argv[1:]
     opt = lambda k: args[args.index(k) + 1] if k in args else None
-    skip = {opt(k) for k in ("-o", "--slots", "--staging")}
+    skip = {opt(k) for k in ("-o", "--slots", "--staging", "--meter")}
     src = [a for a in args if not a.startswith("-") and a not in skip]
     if src:
         w, c = nam_lite.nam_pack.load(src[0], channels=C)
@@ -1490,10 +1684,23 @@ def main():
     MIDQ = "--mid-sweep" in args
     if MIDQ and NO_TONE:
         sys.exit("--mid-sweep needs the tone stack (not --no-tone)")
+    global PLEXI, STATIC
+    PLEXI = "--plexi" in args
+    STATIC = "--static-sdram" in args
+    global BLOCK32
+    BLOCK32 = "--block32" in args
+    if PLEXI and not MIDQ:
+        sys.exit("--plexi needs --mid-sweep")
+    if "--effects" in args and "--podgo" in args:
+        sys.exit("--effects and --podgo are different units")
+    global IR_FLAG, IR_TOP, DDR2, DDR2_END
     if "--effects" in args:
-        global IR_FLAG, IR_TOP
         IR_FLAG, IR_TOP = IR_EFFECTS
-    asm, lay = build(slots, staging=opt("--staging") or "b2")
+    if "--podgo" in args:
+        IR_FLAG, IR_TOP = IR_PODGO
+        DDR2, DDR2_END = DDR2_PODGO
+    meter = int(opt("--meter") or 0)           # a test image: the block plays a meter (see METER_EXIT)
+    asm, lay = build(slots, staging=opt("--staging") or "b2", meter=meter)
     if "-o" in sys.argv:
         open(sys.argv[sys.argv.index("-o") + 1], "w").write(asm)
     for k, v in lay.report().items():

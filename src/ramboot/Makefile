@@ -10,6 +10,17 @@ B       = build
 
 all: $(OUT)/firmware-ramboot.dfu $(OUT)/ramboot-hook.bin
 
+# The POD Go's loader: the same source with EMMC_CMD7_R1B (emmc.h). No newlib needed, so it
+# also builds with Homebrew's arm-none-eabi-gcc, which has no nano.specs.
+podgo: $(OUT)/firmware-ramboot-podgo.dfu
+
+$(OUT)/firmware-ramboot-podgo.dfu: ramboot.c ramboot.h emmc.h sdram.h usb_mon.h startup.c dfu.c dfu.h lpc4350.h lpc4350_ram.ld mkbootimg.py
+	mkdir -p $(B) $(OUT)
+	$(CROSS)gcc $(ARCH) -Os -ffreestanding -fno-builtin -Wall -Wextra -I. -DEMMC_CMD7_R1B -T lpc4350_ram.ld \
+	    -nostartfiles -nostdlib -Wl,--gc-sections startup.c ramboot.c dfu.c -lgcc -o $(B)/firmware-ramboot-podgo.elf
+	$(CROSS)objcopy -O binary $(B)/firmware-ramboot-podgo.elf $(B)/firmware-ramboot-podgo.bin
+	python3 mkbootimg.py $(B)/firmware-ramboot-podgo.bin $@
+
 $(OUT)/firmware-ramboot.dfu: ramboot.c ramboot.h emmc.h sdram.h usb_mon.h startup.c dfu.c dfu.h lpc4350.h lpc4350_ram.ld mkbootimg.py
 	mkdir -p $(B) $(OUT)
 	$(CROSS)gcc $(CFLAGS) $(LDFLAGS) startup.c ramboot.c dfu.c -o $(B)/firmware-ramboot.elf
@@ -25,4 +36,4 @@ $(OUT)/ramboot-hook.bin: ramboot_hook.c ramboot_hook.ld
 clean:
 	rm -rf $(B)
 
-.PHONY: all clean
+.PHONY: all clean podgo
