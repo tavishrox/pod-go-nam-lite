@@ -95,7 +95,7 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
       <a class="btn" href="converter.html">Convert your captures</a>
       <a class="btn ghost" href="https://github.com/tavishrox/pod-go-nam-lite/blob/main/POD_GO.md">Full guide</a>
       <a class="btn ghost" href="https://github.com/tavishrox/pod-go-nam-lite">Code on GitHub</a>
-      <a class="btn ghost" id="channel" href="#" hidden>Toneshift on YouTube</a>
+      <a class="btn ghost" id="channel" href="#" hidden>ToneShift on YouTube</a>
     </div>
     <p class="note"><b>Unofficial and experimental.</b> Not made or supported by Line 6 or Yamaha Guitar Group. Installing modified firmware is at your own risk and may void your warranty. Back up first, and read Recovery below before you start.</p>
   </header>
@@ -116,8 +116,8 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
       <li><div><h3>Back up and get the stock firmware</h3><p>Back up your presets and IRs with POD Go Edit. Keep Line 6's official <code>POD_Go_v2.50.0_0x6e984472.hxf</code> somewhere safe: you build from it, and it is your way back.</p></div></li>
       <li id="build"><div><h3>Build the NAM firmware</h3><p>Drop your stock file here. This page adds NAM A2 Lite to it, in your browser, and gives you the new file to install. Nothing is uploaded: your firmware never leaves this computer, so no Line 6 code is ever shared.</p>
         <div class="builder">
-          <label class="opt"><input type="checkbox" id="fwedition"> <span><b>Add the NAM A2 Edition boot screen</b> (Toneshift's lettering, drawn over your POD Go's own boot screen)</span></label>
-          <div class="edprev" id="edprev" hidden><img src="../../art/nam-a2-edition/wireless.png" alt="The NAM A2 Edition lettering"><span>Shown over the stock POD Go boot screen. The overlay holds only this lettering; your POD Go supplies the rest.</span></div>
+          <label class="opt"><input type="checkbox" id="fwedition"> <span><b>ToneShift Edition</b>: add the boot screen with ToneShift's "NAM A2 Edition" lettering, drawn over your POD Go's own boot screen</span></label>
+          <div class="edprev" id="edprev" hidden><img src="../../art/nam-a2-edition/wireless.png" alt="The ToneShift Edition boot-screen lettering"><span>Shown over the stock POD Go boot screen. The overlay holds only this lettering; your POD Go supplies the rest.</span></div>
           <label class="opt"><input type="checkbox" id="fwnames"> <span><b>Show capture names on the Model knob</b> (e.g. "4 Mesa JP2C" instead of 0.3) · <i>experimental</i>: tested from RAM on a POD Go</span></label>
           <label class="drop" id="fwdrop" tabindex="0" for="fwpick">
             <strong>Drop POD_Go_v2.50.0_0x6e984472.hxf here</strong>
@@ -176,7 +176,7 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
   </section>
 
   <footer>
-    <p>Built on <a href="https://github.com/nocaseguy/hx-stomp-nam-lite">hx-stomp-nam-lite</a> by Derek Bui (HX Stomp, HX Stomp XL, HX Effects). <a href="https://www.neuralampmodeler.com">Neural Amp Modeler</a> by Steven Atkinson. POD Go port by Toneshift. GPL-3.0-or-later.</p>
+    <p>Built on <a href="https://github.com/nocaseguy/hx-stomp-nam-lite">hx-stomp-nam-lite</a> by Derek Bui (HX Stomp, HX Stomp XL, HX Effects). <a href="https://www.neuralampmodeler.com">Neural Amp Modeler</a> by Steven Atkinson. POD Go port by ToneShift. GPL-3.0-or-later.</p>
     <p>No Line 6 firmware, code, data or artwork is included, and no NAM captures. Tested on a POD Go Wireless; the wired POD Go uses the same firmware file.</p>
   </footer>
 </div>
@@ -213,8 +213,8 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
         url = URL.createObjectURL(new Blob([m.bytes], { type: "application/octet-stream" }));
         save.href = url; save.download = m.file; done.hidden = false;
         var extra = m.names ? " with Model-knob names (experimental)" : "";
-        if (m.pinned && m.names) status("ok", "Verified: your POD Go firmware" + (m.edition ? " (NAM A2 Edition)" : "") + extra + " is ready.", " It is byte for byte the project's build" + extra + " (MD5 " + m.md5 + "): the tested build plus a small display change that only alters the Model knob's text. Download it, then install it with Line 6 Updater (step 3).");
-        else if (m.pinned && m.edition) status("ok", "Verified: your POD Go firmware (NAM A2 Edition) is ready.", " It is byte for byte the project's Edition build (MD5 " + m.md5 + "): the build tested on a POD Go plus the boot screen. Download it, then install it with Line 6 Updater (step 3).");
+        if (m.pinned && m.names) status("ok", "Verified: your POD Go firmware" + (m.edition ? " (ToneShift Edition)" : "") + extra + " is ready.", " It is byte for byte the project's build" + extra + " (MD5 " + m.md5 + "): the tested build plus a small display change that only alters the Model knob's text. Download it, then install it with Line 6 Updater (step 3).");
+        else if (m.pinned && m.edition) status("ok", "Verified: your POD Go firmware (ToneShift Edition) is ready.", " It is byte for byte the project's ToneShift Edition build (MD5 " + m.md5 + "): the build tested on a POD Go plus the boot screen. Download it, then install it with Line 6 Updater (step 3).");
         else if (m.pinned) status("ok", "Verified: your POD Go firmware is ready.", " It is byte for byte the build the project tested on a POD Go (MD5 " + m.md5 + "). Download it, then install it with Line 6 Updater (step 3).");
         else status("bad", "Built, but not the tested file.", " Every checksum passed, but the result differs from the tested build (MD5 " + m.md5 + "). That shouldn't happen: please report it before installing.");
       } else if (m.type === "error") {
@@ -243,7 +243,7 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
 })();
 // Launch links: set these two and the page shows the video and the channel button.
 var VIDEO_ID = "";      // the YouTube video id, e.g. "dQw4w9WgXcQ" from youtube.com/watch?v=dQw4w9WgXcQ
-var CHANNEL_URL = "";   // e.g. "https://www.youtube.com/@Toneshift"
+var CHANNEL_URL = "";   // e.g. "https://www.youtube.com/@ToneShift"
 if (VIDEO_ID) {
   var v = document.getElementById("video"), f = document.createElement("iframe");
   f.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(VIDEO_ID);

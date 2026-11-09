@@ -7,7 +7,9 @@ Major changes, newest first. The repository has no version numbers, so each entr
 
 - `--model-names` (a tick box on the setup page): the NAM block's Model knob shows the slot and its IR's name
   (`podgo/model_names.py`, `tools/arm/model_names_cave.s`; `docs/PODGO_PORT_MAP.md` "Model names"). Ran on a
-  POD Go Wireless from RAM. MD5s 2cb12144 (Elektrik) and 0b27b025 (Edition).
+  POD Go Wireless from RAM. MD5s 2cb12144 (Elektrik) and 0b27b025 (ToneShift Edition).
+- The Edition release is now called the **ToneShift Edition** (`..._ToneShift_Edition.hxf`); the boot-screen
+  lettering still reads "NAM A2 Edition". Same bytes, new file name.
 - Converter: a Name box per capture (about 20 characters show in POD Go Edit).
 
 ## 2026-11-08: POD Go and POD Go Wireless (2.50)
@@ -19,7 +21,7 @@ Major changes, newest first. The repository has no version numbers, so each entr
   (`make podgo`; CMD7 waits for its R1b busy on this unit's eMMC). `tools/l6ia.py` takes the POD Go's marker.
 - Firmware builder in the browser (`web/pod-go/firmware-worker.js`): the stock file in, the NAM firmware out,
   compared with the tested build (MD5 61920a6c, the build that ran on a POD Go Wireless); `tests/test_podgo_build.py`.
-- NAM A2 Edition boot screens (`--edition`, a tick box on the setup page): Toneshift's lettering
+- NAM A2 Edition boot screens (`--edition`, a tick box on the setup page): ToneShift's lettering
   (`art/nam-a2-edition/`, CC BY 4.0) drawn over the user's own boot screens; MD5 70cfd341.
 - Converter page for the POD Go (`web/pod-go/`), NAM preset templates (`templates/`, `podgo/make_templates.py`),
   a block helper for amps, cabs, IRs and FX loops in freed blocks (`podgo/blocks.py`), boot-screen images

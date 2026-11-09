@@ -4,7 +4,7 @@
 POD Go's own DSP as an amp block, with your effects either side of it.
 
 <!-- LAUNCH: the video link and thumbnail go here -->
-▶️ **Watch the launch video on [Toneshift](#)** · 🌐 **[Setup page and capture converter](https://tavishrox.github.io/pod-go-nam-lite/)**
+▶️ **Watch the launch video on [ToneShift](#)** · 🌐 **[Setup page and capture converter](https://tavishrox.github.io/pod-go-nam-lite/)**
 
 > **Unofficial and experimental.** Not affiliated with, endorsed by or supported by Line 6 or Yamaha Guitar
 > Group. Installing modified firmware is at your own risk and may void your warranty. Read
@@ -25,7 +25,7 @@ which does the same for the HX Stomp, HX Stomp XL and HX Effects. The HX instruc
 - **Cab included.** Most captures include the speaker cab, so turn the cab block off and spend that DSP on effects.
 - **Tone controls** after the capture (Bass, Mid with frequency and width, Treble, High Cut), **Input** to set
   how hard it's driven, and **Output**.
-- **A NAM A2 Edition boot screen** (optional): Toneshift's lettering over your POD Go's own splash.
+- **The ToneShift Edition** (optional): a boot screen with ToneShift's "NAM A2 Edition" lettering over your POD Go's own splash.
 - **Free the fixed blocks.** [Preset templates](templates/) for NAM without the cab, FX loop or fixed EQ, and a
   [block helper](POD_GO.md#the-block-helper) to put an amp, cab, IR or FX loop into any empty block.
 
@@ -70,7 +70,7 @@ what happened).
 - **[hx-stomp-nam-lite](https://github.com/nocaseguy/hx-stomp-nam-lite)** by **Derek Bui**: the NAM kernel,
   converter, build tools and RAM loader this port is built on.
 - **[Neural Amp Modeler](https://www.neuralampmodeler.com)** by Steven Atkinson: the A2 model format.
-- **POD Go port**: Toneshift.
+- **POD Go port**: ToneShift.
 
 GPL-3.0-or-later, as upstream. See [LICENSE](LICENSE) and [NOTICE](NOTICE). No Line 6 firmware, code, data or
 artwork is included or distributed, and no NAM captures.

@@ -4,7 +4,7 @@
     python3 podgo/build_podgo.py POD_Go_v2.50.0_0x6e984472.hxf [-o OUT.hxf] [--no-check]
         [--donor elektrik|plexi] [--edition] [--splash IMG] [--splash-wireless IMG] [--model-names]
 
---edition: the "NAM A2 Edition" boot screens (art/nam-a2-edition/, by Toneshift), drawn over the boot screens
+--edition: the ToneShift Edition: boot screens with "NAM A2 Edition" lettering (art/nam-a2-edition/, by ToneShift), drawn over the boot screens
 of your own firmware file (no Line 6 artwork is in this repository). --splash IMG: a whole 480x272 image.
 --model-names (experimental): the NAM block's Model knob shows the slot and its IR's name (podgo/model_names.py).
 
@@ -33,7 +33,7 @@ STOCK_MD5S = {'e0ea3e1ed32f0f353b79f6ad39631838'}           # POD_Go_v2.50.0_0x6
 BUILT_MD5 = '61920a6cdb5342cecffcd968e1ae6ad1'              # the default build's .hxf (Elektrik, no splash)
 KERNEL_ARGS = ['--mid-sweep', '--podgo', '--plexi', '--static-sdram', '--block32']
 OUT_NAME = 'POD_Go_v2.50.0_NAM_A2_Lite.hxf'
-OUT_NAME_EDITION = 'POD_Go_v2.50.0_NAM_A2_Lite_Edition.hxf'
+OUT_NAME_EDITION = 'POD_Go_v2.50.0_NAM_A2_Lite_ToneShift_Edition.hxf'
 BUILT_MD5_EDITION = '70cfd341bb4bf00422f7ea19c5b49e95'                                    # the --edition build's .hxf
 # --model-names (experimental, podgo/model_names.py): the same builds with the Model knob's names
 BUILT_MD5_NAMES = '2cb121444bfe5e4a9259903b7ea2dc83'

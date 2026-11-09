@@ -5,7 +5,7 @@
 // project tested (build_podgo.BUILT_MD5): a match means these are the very bytes that ran on a POD Go.
 //
 // Messages in:  { stock: ArrayBuffer, edition: bool, names: bool }   (names: the Model knob shows the IR's name, podgo/model_names.py)
-//   (edition: the NAM A2 Edition boot screens, art/nam-a2-edition/,
+//   (edition: the ToneShift Edition boot screens, art/nam-a2-edition/,
 //                                                       drawn over the boot screens of the user's own file)
 // Messages out: { type: "progress", step, of, text } | { type: "log", text }
 //               { type: "done", file, bytes: ArrayBuffer, md5, pinned } | { type: "error", text }
@@ -19,7 +19,7 @@ var BUILT_MD5 = "61920a6cdb5342cecffcd968e1ae6ad1";
 var KERNEL_ARGS = ["--mid-sweep", "--podgo", "--plexi", "--static-sdram", "--block32"];
 var OUT_NAME = "POD_Go_v2.50.0_NAM_A2_Lite.hxf";
 var BUILT_MD5_EDITION = "70cfd341bb4bf00422f7ea19c5b49e95";
-var OUT_NAME_EDITION = "POD_Go_v2.50.0_NAM_A2_Lite_Edition.hxf";
+var OUT_NAME_EDITION = "POD_Go_v2.50.0_NAM_A2_Lite_ToneShift_Edition.hxf";
 var BUILT_MD5_NAMES = "2cb121444bfe5e4a9259903b7ea2dc83";
 var BUILT_MD5_EDITION_NAMES = "0b27b025a84fc4a6d7af77f72f85d5ea";
 var EDITION_SOURCES = ["podgo/splash.py", "art/nam-a2-edition/wired.png", "art/nam-a2-edition/wireless.png"];

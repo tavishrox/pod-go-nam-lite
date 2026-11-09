@@ -523,7 +523,7 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
 
   function modelValue(slot) { return ((slot - 1) / 10).toFixed(1); }
   function baseName(f) { return f.replace(/\.nam$/i, ""); }
-  // POD Go Edit takes the IR's name from the file name; about 20 characters show (Toneshift, on a POD Go Wireless).
+  // POD Go Edit takes the IR's name from the file name; about 20 characters show (ToneShift, on a POD Go Wireless).
   var NAME_MAX = 20, TAG = "NAM ";
   var tagOn = true;
   function room() { return NAME_MAX - (tagOn ? TAG.length : 0); }

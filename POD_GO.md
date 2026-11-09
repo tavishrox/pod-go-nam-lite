@@ -5,7 +5,7 @@ A Neural Amp Modeler block for the **Line 6 POD Go and POD Go Wireless, firmware
 DSP, as an amp block, next to everything the POD Go already does.
 
 This is a port of [hx-stomp-nam-lite](https://github.com/nocaseguy/hx-stomp-nam-lite) by Derek Bui,
-which does the same for the HX Stomp, HX Stomp XL and HX Effects. POD Go port by Toneshift.
+which does the same for the HX Stomp, HX Stomp XL and HX Effects. POD Go port by ToneShift.
 
 > **Unofficial and experimental.** Not affiliated with, endorsed by or supported by Line 6 or Yamaha
 > Guitar Group. Installing modified firmware is at your own risk and may void your warranty. Read
@@ -179,8 +179,8 @@ before it in `build/blocks_undo/` (`blocks.py restore FILE`).
 
 ## Your own boot screen
 
-**NAM A2 Edition**: tick *Add the NAM A2 Edition boot screen* on the setup page, or build with `--edition`.
-Toneshift's lettering ([art/nam-a2-edition](art/nam-a2-edition/), CC BY 4.0) is drawn over your own POD Go's
+**ToneShift Edition**: tick *ToneShift Edition* on the setup page, or build with `--edition`.
+ToneShift's lettering ([art/nam-a2-edition](art/nam-a2-edition/), CC BY 4.0) is drawn over your own POD Go's
 boot screen; the repository holds only the lettering.
 
 
