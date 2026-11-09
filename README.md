@@ -42,7 +42,7 @@ the neural network on your guitar. You build the firmware yourself, from your ow
 
 1. **Read the [POD Go guide](POD_GO.md)**: what's needed, building, installing, recovery, the knobs.
 2. **Build** the firmware: drop your stock `POD_Go_v2.50.0_0x6e984472.hxf` on the
-   [setup page](https://tavishrox.github.io/pod-go-nam-lite/#build). It builds in your browser (nothing is uploaded)
+   [setup page](https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/#build). It builds in your browser (nothing is uploaded)
    and says **Verified** when the result is byte for byte the tested build. Or on the command line:
    ```bash
    python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt

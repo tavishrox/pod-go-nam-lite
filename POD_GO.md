@@ -228,7 +228,7 @@ If the unit stops at the splash screen or an update fails:
 
 ## Building
 
-The easy way: the [setup page](https://tavishrox.github.io/pod-go-nam-lite/#build) builds it in your browser
+The easy way: the [setup page](https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/#build) builds it in your browser
 (Pyodide running these same tools; nothing is uploaded) and compares the result with the tested build. The
 command line does the same, plus a run of the NAM code in a SHARC simulator:
 
