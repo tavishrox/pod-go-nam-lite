@@ -150,8 +150,32 @@ def unit_of(path):
 
 
 def app_of(e0):
-    """The APPS entry (unit, eMMC functions, card) of a stock entry 0, or None."""
-    return APPS.get(zlib.crc32(e0[0x34:struct.unpack_from("<I", e0, 4)[0]]))
+    """The APPS entry (unit, eMMC functions, card) of a stock entry 0, or None.
+
+    By the CRC of a known application; otherwise (a NAM build that adds code, e.g. --model-names)
+    when both eMMC functions of a known POD Go application are there byte for byte at the same
+    addresses, prologue and card literal included: the hook only needs those."""
+    known = APPS.get(zlib.crc32(e0[0x34:struct.unpack_from("<I", e0, 4)[0]]))
+    if known:
+        return known
+    try:
+        segs = app_segments(e0)[0]
+    except SystemExit:
+        return None
+    for unit, funcs, card in APPS.values():
+        if unit != "POD Go":
+            continue
+        ok = True
+        for start, _ in funcs.values():
+            lit = ((start + 4 + 4) & ~3) + 0x200       # ldr r5, [pc, #512] after the 4-byte push.w
+            try:
+                ok &= (seg_read(segs, start, len(PROLOGUE)) == PROLOGUE and
+                       struct.unpack("<I", seg_read(segs, lit, 4))[0] == card)
+            except SystemExit:
+                ok = False
+        if ok:
+            return unit, funcs, card
+    return None
 
 
 def app_segments(e0):

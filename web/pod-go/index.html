@@ -81,6 +81,11 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-spa
 button.btn { cursor: pointer; }
 details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
 details pre { margin-top: 8px; max-height: 260px; }
+.trybox { display: grid; gap: 10px; background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 16px; }
+.trybox ol { margin: 0; padding-left: 20px; color: var(--muted); font-size: 15px; display: grid; gap: 4px; }
+.trybox .opt span { color: var(--muted); }
+.bar { height: 6px; background: var(--rule); border-radius: 3px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
 footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-top: 1px solid var(--rule); padding-top: 18px; }
 </style>
 </head>
@@ -127,6 +132,23 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
           <div class="fwstatus" id="fwstatus" role="status" hidden></div>
           <div class="row" id="fwdone" hidden><a class="btn" id="fwsave" href="#" download>Download firmware</a><button class="btn ghost" id="fwagain" type="button">Build another</button></div>
           <details id="fwlogbox" hidden><summary>Technical details</summary><pre id="fwlog"></pre></details>
+          <div class="trybox" id="ram" hidden>
+            <h3>Optional: try it first, without installing</h3>
+            <p class="small">This page can run the firmware you just built from the POD Go's memory for one session. Nothing is written to the POD Go: turn it off and on and it starts what is installed, as before.</p>
+            <ol>
+              <li>Use <b>Chrome</b> or <b>Edge</b> on a computer, and <b>quit POD Go Edit and Line 6 Updater</b>: they hold the USB connection.</li>
+              <li>Connect the POD Go with USB, turn it on and click <b>Run from RAM</b>. Pick the POD Go in the browser's list. As it restarts, the browser asks twice more: each time click <b>Continue</b> and pick the device it lists.</li>
+              <li>If the POD Go isn't in the list, turn it off, <b>hold Page &gt; while you turn it on</b> (update mode), and click <b>Run from RAM</b> again.</li>
+            </ol>
+            <label class="opt"><input type="checkbox" id="raminst"> <span>My POD Go already runs a NAM build from this page (not stock 2.50). Choose that .hxf: the run checks the POD Go against it.</span></label>
+            <input type="file" id="raminstpick" accept=".hxf" hidden>
+            <p class="small" id="raminstname" hidden></p>
+            <p class="small">What you change during the run (presets, imported IRs) is gone when you turn the POD Go off, so import your captures with the normal firmware first. Knobs can react slowly from RAM; installed, they don't.</p>
+            <div class="row"><button class="btn" id="ramGo" type="button">Run from RAM</button><button class="btn" id="ramNext" type="button" hidden>Continue</button></div>
+            <div class="fwstatus" id="ramStatus" role="status" hidden></div>
+            <div class="bar" id="ramBarWrap" hidden><i id="ramBar"></i></div>
+            <details><summary>Technical details</summary><pre id="ramLog"></pre></details>
+          </div>
         </div>
         <p class="small">The first build downloads the build tools (about 15 MB) and takes 30–90 seconds. Keep this tab open until it finishes. It checks your file's fingerprint first, and at the end compares the result with the build the project tested on a POD Go: it says <b>Verified</b> only when every byte matches.</p>
         <details><summary>Prefer the command line?</summary>
@@ -141,13 +163,15 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
 
   <section aria-labelledby="tpl">
     <h2 id="tpl">Preset templates</h2>
-    <p>Import with POD Go Edit. Each one leaves out the blocks NAM doesn't need, so the DSP goes to effects. NAM is on IR slot 4; the expression pedal runs volume, with the wah on the toe switch.</p>
+    <p>Import with POD Go Edit. The first three leave out the blocks NAM doesn't need (cab, FX loop, fixed EQ), so the DSP goes to effects; the last two keep the stock layout and drop only the FX loop (and the cab). NAM is on IR slot 4; the expression pedal runs volume, with the wah on the toe switch.</p>
     <div class="tbl"><table>
       <thead><tr><th>Template</th><th>Chain</th><th>DSP units</th></tr></thead>
       <tbody>
         <tr><td><a href="../../templates/NAM%20Blank.pgp" download>NAM Blank</a></td><td>Volume, NAM; 9 empty blocks</td><td class="num">3,000</td></tr>
         <tr><td><a href="../../templates/NAM%20Essentials.pgp" download>NAM Essentials</a></td><td>Volume, Wah, Minotaur, NAM, Simple Delay, Plate</td><td class="num">5,411</td></tr>
         <tr><td><a href="../../templates/NAM%20Full%20Board.pgp" download>NAM Full Board</a></td><td>Volume, Deluxe Comp, Minotaur, NAM, Simple EQ, Chorus, Vintage Digital, Hall</td><td class="num">6,725</td></tr>
+        <tr><td><a href="../../templates/NAM%20No%20FX%20Loop.pgp" download>NAM No FX Loop</a></td><td>Stock layout without the FX loop: Wah, Volume, NAM, Cab, EQ; for captures without a cab</td><td class="num">3,886</td></tr>
+        <tr><td><a href="../../templates/NAM%20No%20FX%20Loop%20or%20Cab.pgp" download>NAM No FX Loop or Cab</a></td><td>Stock layout without the FX loop or cab: Wah, Volume, NAM, EQ</td><td class="num">3,636</td></tr>
       </tbody>
     </table></div>
     <p>The unit's limits with fixed blocks removed: one each of amp, cab or IR, fixed EQ and FX loop; up to 7 other effects; blocks totalling about 8,000 units. NAM counts as 2,850.</p>
@@ -176,10 +200,11 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
   </section>
 
   <footer>
-    <p>Built on <a href="https://github.com/nocaseguy/hx-stomp-nam-lite">hx-stomp-nam-lite</a> by Derek Bui (HX Stomp, HX Stomp XL, HX Effects). <a href="https://www.neuralampmodeler.com">Neural Amp Modeler</a> by Steven Atkinson. POD Go port by ToneShift. GPL-3.0-or-later.</p>
+    <p>Built on <a href="https://github.com/nocaseguy/hx-stomp-nam-lite">hx-stomp-nam-lite</a> by Derek Bui (HX Stomp, HX Stomp XL, HX Effects). <a href="https://www.neuralampmodeler.com">Neural Amp Modeler</a> by Steven Atkinson. POD Go port © 2026 Mark Daniels (TavishRox, ToneShift). GPL-3.0-or-later.</p>
     <p>No Line 6 firmware, code, data or artwork is included, and no NAM captures. Tested on a POD Go Wireless; the wired POD Go uses the same firmware file.</p>
   </footer>
 </div>
+<script src="../ramrun.js"></script>
 <script>
 // The firmware builder (firmware-worker.js): the stock file in, the NAM firmware out, in this tab.
 (function () {
@@ -201,15 +226,18 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
     if (name && /\.nam$/i.test(name)) { status("bad", "That's a NAM capture, not firmware.", " Captures go on the converter page. Here, drop Line 6's firmware file (it ends in .hxf)."); return; }
     if (buf.byteLength < 20e6 || buf.byteLength > 80e6) { status("bad", "That doesn't look like the POD Go firmware file.", " The stock file is about 45 MB and ends in .hxf."); return; }
     if (url) { URL.revokeObjectURL(url); url = null; }
-    done.hidden = true; log.textContent = ""; logbox.hidden = false; drop.classList.add("busy");
+    done.hidden = true; $("ram").hidden = true; log.textContent = ""; logbox.hidden = false; drop.classList.add("busy");
     status("work", "Building…", " Starting.");
     worker = worker || new Worker("firmware-worker.js");
     worker.onmessage = function (e) {
       var m = e.data;
       if (m.type === "progress") status("work", "Building…", " Step " + m.step + " of " + m.of + ": " + m.text);
       else if (m.type === "log") log.textContent += m.text;
+      else if (m.type === "plan" || m.type === "planError") { if (window.podgoRam) window.podgoRam(m); }
       else if (m.type === "done") {
         reset();
+        window.podgoWorker = worker;
+        $("ram").hidden = false;
         url = URL.createObjectURL(new Blob([m.bytes], { type: "application/octet-stream" }));
         save.href = url; save.download = m.file; done.hidden = false;
         var extra = m.names ? " with Model-knob names (experimental)" : "";
@@ -240,6 +268,87 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
   ["dragleave", "drop"].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.remove("over"); }); });
   drop.addEventListener("drop", function (e) { if (e.dataTransfer && e.dataTransfer.files[0]) fromFile(e.dataTransfer.files[0]); });
   $("fwagain").addEventListener("click", function () { done.hidden = true; st.hidden = true; pick.click(); });
+})();
+// Try it from RAM (../ramrun.js, as on the HX Stomp page): the worker plans the run of the last
+// build against what is installed, then RAMRUN sends the POD Go's own RAM loader and the plan.
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var st = $("ramStatus"), busy = false, loader = null, installed = null, installedName = "";
+  function status(kind, title, text) {
+    st.hidden = false; st.className = "fwstatus " + kind; st.textContent = "";
+    var b = document.createElement("b"); b.textContent = title; st.appendChild(b);
+    if (text) st.appendChild(document.createTextNode(text));
+  }
+  function log(t) { var pre = $("ramLog"); pre.textContent += t; pre.scrollTop = pre.scrollHeight; }
+  if (!navigator.usb) {
+    $("ramGo").disabled = true;
+    status("bad", "This browser can't talk to USB devices.", " Use Chrome or Edge on a computer for the RAM run; installing with Line 6 Updater works from any browser.");
+  }
+  $("raminst").addEventListener("change", function () {
+    if (this.checked) $("raminstpick").click();
+    else { installed = null; installedName = ""; $("raminstname").hidden = true; }
+  });
+  $("raminstpick").addEventListener("change", function () {
+    var f = this.files[0]; this.value = "";
+    if (!f) { if (!installed) $("raminst").checked = false; return; }
+    var r = new FileReader();
+    r.onload = function () { installed = r.result; installedName = f.name; $("raminstname").hidden = false; $("raminstname").textContent = "Installed: " + f.name; };
+    r.readAsArrayBuffer(f);
+  });
+  var planned = null;
+  window.podgoRam = function (m) { if (planned) { var p = planned; planned = null; p(m); } };
+  function plan() {
+    return new Promise(function (resolve, reject) {
+      planned = function (m) {
+        if (m.type === "plan") { m.regions.forEach(function (r) { r.bytes = new Uint8Array(r.bytes); }); resolve(m); }
+        else reject(Object.assign(new Error(m.text), { code: "plan" }));
+      };
+      window.podgoWorker.postMessage({ plan: true, installed: installed ? installed.slice(0) : null });
+    });
+  }
+  var STAGE = { reboot: "Asking the POD Go to restart in update mode…", dfu: "Sending the RAM loader…", loader: "Talking to the RAM loader…",
+    emmc: "Checking the installed firmware…", upload: "Sending the firmware", start: "Starting the firmware…" };
+  var ASK = { dfu: "The POD Go is in update mode. Click Continue and pick it in the browser's list (it may show as an unknown device, 1fc9:000c).",
+    loader: "The RAM loader is running. Click Continue and pick it in the browser's list (an unknown device, 1209:0001)." };
+  $("ramGo").addEventListener("click", async function () {
+    if (busy || !window.podgoWorker) return;
+    busy = true; $("ramGo").disabled = true; $("ramLog").textContent = ""; $("ramBar").style.width = "0%";
+    var stage = "";
+    try {
+      status("work", "Preparing…", " Planning the run" + (installed ? " against " + installedName : " against stock 2.50") + ".");
+      var p = await plan();
+      if (!loader) {
+        var r = await fetch("../../tools/ramboot/firmware-ramboot-podgo.dfu", { cache: "no-cache" });
+        if (!r.ok) throw new Error("firmware-ramboot-podgo.dfu: " + r.status);
+        loader = new Uint8Array(await r.arrayBuffer());
+      }
+      status("work", "Running…", " Pick the POD Go in the browser's list.");
+      await RAMRUN.run({
+        usb: navigator.usb, plan: p, loader: loader, log: log,
+        installed: installed ? installedName : "stock 2.50",
+        stage: function (s) { stage = s; $("ramBarWrap").hidden = false; $("ramBar").style.width = "0%"; status("work", "Running…", " " + (STAGE[s] || s)); },
+        progress: function (f) { $("ramBar").style.width = Math.round(100 * f) + "%"; if (stage === "upload") status("work", "Running…", " Sending the firmware: " + Math.floor(100 * f) + "%"); },
+        ask: function (s) {
+          status("work", "Running…", " " + (ASK[s] || "Click Continue and pick the device the browser lists."));
+          $("ramNext").hidden = false;
+          return new Promise(function (resolve) { $("ramNext").onclick = function () { $("ramNext").hidden = true; $("ramNext").onclick = null; resolve(); }; });
+        },
+        unask: function () { $("ramNext").hidden = true; $("ramNext").onclick = null; }
+      });
+      status("ok", "Running from RAM.", " The POD Go is playing the new firmware. Turn it off and on to go back to what is installed.");
+    } catch (e) {
+      $("ramNext").hidden = true;
+      log("\n" + (e && e.message ? e.message : e) + "\n");
+      var c = e && e.code;
+      if (c === "cancel") status("bad", "No device chosen.", " Click Run from RAM again and pick the POD Go.");
+      else if (c === "busy") status("bad", "The POD Go is busy.", " Quit POD Go Edit and Line 6 Updater, then try again.");
+      else if (c === "emmc") status("bad", "The installed firmware isn't the one expected.", " Nothing was started. If your POD Go runs an earlier build from this page, tick the box above and choose that file; otherwise it needs stock 2.50 installed. Turn it off and on.");
+      else if (c === "plan") status("bad", "This build can't be run from RAM against that file.", " " + e.message.slice(0, 300));
+      else status("bad", "The RAM run stopped.", " Nothing was written to the POD Go. Turn it off and on; the technical details say what happened.");
+    } finally {
+      busy = false; $("ramGo").disabled = !navigator.usb;
+    }
+  });
 })();
 // Launch links: set these two and the page shows the video and the channel button.
 var VIDEO_ID = "";      // the YouTube video id, e.g. "dQw4w9WgXcQ" from youtube.com/watch?v=dQw4w9WgXcQ

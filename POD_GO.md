@@ -5,7 +5,7 @@ A Neural Amp Modeler block for the **Line 6 POD Go and POD Go Wireless, firmware
 DSP, as an amp block, next to everything the POD Go already does.
 
 This is a port of [hx-stomp-nam-lite](https://github.com/nocaseguy/hx-stomp-nam-lite) by Derek Bui,
-which does the same for the HX Stomp, HX Stomp XL and HX Effects. POD Go port by ToneShift.
+which does the same for the HX Stomp, HX Stomp XL and HX Effects. POD Go port by Mark Daniels (TavishRox, ToneShift).
 
 > **Unofficial and experimental.** Not affiliated with, endorsed by or supported by Line 6 or Yamaha
 > Guitar Group. Installing modified firmware is at your own risk and may void your warranty. Read
@@ -156,9 +156,12 @@ Import with POD Go Edit (they overwrite the slot you import into):
 | [NAM Blank](templates/NAM%20Blank.pgp) | Volume, NAM; 9 empty blocks | 3,000 |
 | [NAM Essentials](templates/NAM%20Essentials.pgp) | Volume, Wah, Minotaur, NAM, Simple Delay, Plate | 5,411 |
 | [NAM Full Board](templates/NAM%20Full%20Board.pgp) | Volume, Deluxe Comp, Minotaur, NAM, Simple EQ, Chorus, Vintage Digital, Hall | 6,725 |
+| [NAM No FX Loop](templates/NAM%20No%20FX%20Loop.pgp) | Stock layout without the FX loop: Wah, Volume, NAM, Cab (4x12 Cali V30), EQ (off); 5 empty blocks | 3,886 |
+| [NAM No FX Loop or Cab](templates/NAM%20No%20FX%20Loop%20or%20Cab.pgp) | Stock layout without the FX loop or cab: Wah, Volume, NAM, EQ (off); 6 empty blocks | 3,636 |
 
 NAM is on IR slot 4 (Model 0.3): set Model to your capture's slot. The expression pedal runs volume, with the
-wah on the toe switch. `podgo/make_templates.py` makes your own from any POD Go Edit export.
+wah on the toe switch. Use **NAM No FX Loop** for amp-only captures (no cab in the capture), the others
+for full-rig captures. `podgo/make_templates.py` makes your own from any POD Go Edit export.
 
 ### The block helper
 
@@ -272,6 +275,6 @@ For anyone porting further, the full log is `docs/PODGO_PORT_MAP.md`. In short:
 - [hx-stomp-nam-lite](https://github.com/nocaseguy/hx-stomp-nam-lite) by **Derek Bui**: the NAM
   kernel, converter, build tools and RAM loader this port is built on.
 - [Neural Amp Modeler](https://www.neuralampmodeler.com) by Steven Atkinson: the A2 model format.
-- POD Go port: this project.
+- POD Go port: this project, copyright (C) 2026 Mark Daniels (TavishRox, ToneShift), GPL-3.0-or-later.
 
 GPL-3.0, as the upstream project. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

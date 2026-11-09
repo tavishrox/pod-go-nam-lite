@@ -7,8 +7,12 @@
 // Messages in:  { stock: ArrayBuffer, edition: bool, names: bool }   (names: the Model knob shows the IR's name, podgo/model_names.py)
 //   (edition: the ToneShift Edition boot screens, art/nam-a2-edition/,
 //                                                       drawn over the boot screens of the user's own file)
+//               { plan: true, installed: ArrayBuffer | null }   after a build: the RAM run of the built file
+//                 (tools/hxf_ram.py plan) against what the POD Go has installed: stock 2.50 (null) or
+//                 the .hxf given (an earlier build from this page)
 // Messages out: { type: "progress", step, of, text } | { type: "log", text }
 //               { type: "done", file, bytes: ArrayBuffer, md5, pinned } | { type: "error", text }
+//               { type: "plan", regions: [{ addr, label, bytes: ArrayBuffer }], checks } | { type: "planError", text }
 "use strict";
 
 var PYODIDE = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
@@ -44,6 +48,9 @@ var SOURCES = [
   "podgo/podgo_model.py",
   "podgo/podgo_e2.py",
   "podgo/model_names.py",
+  "podgo/emmc_layout_podgo_2.50.json",
+  "tools/hxf_ram.py",
+  "tools/ramboot/ramboot-hook.bin",
 ];
 
 var DRIVER = [
@@ -71,7 +78,7 @@ var DRIVER = [
   "    return out.getvalue()",
 ].join("\n");
 
-var py = null, editionLoaded = false;
+var py = null, editionLoaded = false, built = null;   // built: the last build's file name in /repo/build
 
 function post(msg, transfer) { self.postMessage(msg, transfer || []); }
 function progress(step, of, text) { post({ type: "progress", step: step, of: of, text: text }); }
@@ -87,7 +94,7 @@ async function boot() {
     if (!r.ok) throw new Error("Could not load " + path + " (" + r.status + ").");
     return [path, new Uint8Array(await r.arrayBuffer())];
   }));
-  ["/repo", "/repo/tools", "/repo/tools/sharc", "/repo/podgo", "/repo/build", "/repo/art", "/repo/art/nam-a2-edition"].forEach(function (d) {
+  ["/repo", "/repo/tools", "/repo/tools/sharc", "/repo/tools/ramboot", "/repo/podgo", "/repo/build", "/repo/art", "/repo/art/nam-a2-edition"].forEach(function (d) {
     try { p.FS.mkdir(d); } catch (e) { /* exists */ }
   });
   files.forEach(function (f) { p.FS.writeFile("/repo/" + f[0], f[1]); });
@@ -117,6 +124,7 @@ async function build(stock, edition, names) {
   var p = await boot();
   if (edition) await loadEdition(p);
 
+  if (built) { try { p.FS.unlink("/repo/build/" + built); } catch (e) { /* gone */ } built = null; }
   progress(2, of, "Checking your firmware file…");
   p.FS.writeFile("/repo/build/stock.hxf", new Uint8Array(stock));
   stock = null;
@@ -147,16 +155,53 @@ async function build(stock, edition, names) {
     run.destroy();
     make.destroy();
   }
+  built = outName;                            // kept, with stock.hxf, for a RAM run plan
   var bytes = p.FS.readFile("/repo/build/" + outName);
   var outMd5 = p.runPython("import hashlib; hashlib.md5(open('/repo/build/" + outName + "','rb').read()).hexdigest()");
-  ["stock.hxf", "nam_lite.l6ia", "nam_lite.asm", outName].forEach(function (f) {
+  ["nam_lite.l6ia", "nam_lite.asm"].forEach(function (f) {
     try { p.FS.unlink("/repo/build/" + f); } catch (e) { /* gone */ }
   });
   var buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
   post({ type: "done", file: outName, bytes: buf, md5: outMd5, pinned: outMd5 === pinnedMd5, edition: !!edition, names: !!names }, [buf]);
 }
 
+// The RAM run of the last build: what tools/hxf_ram.py run would send. It checks the unit's eMMC
+// against the base given (stock or the installed build) before anything starts.
+async function plan(installed) {
+  var p = py, dir = "/repo/build/ram";
+  if (!p || !built) throw new Error("Build the firmware first.");
+  var base = "build/stock.hxf";
+  if (installed) { p.FS.writeFile("/repo/build/installed.hxf", new Uint8Array(installed)); base = "build/installed.hxf"; }
+  var run = p.globals.get("run");
+  try {
+    var argv = ["tools/hxf_ram.py", "plan", "build/" + built, "--stock", base, "--out", "build/ram"];
+    post({ type: "log", text: "$ " + argv.join(" ") + "\n" });
+    post({ type: "log", text: run(p.toPy(argv)) });
+    var meta = JSON.parse(new TextDecoder().decode(p.FS.readFile(dir + "/plan.json")));
+    var bufs = [];
+    var regions = meta.regions.map(function (r) {
+      var b = p.FS.readFile(dir + "/" + r.file), buf = b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
+      bufs.push(buf);
+      return { addr: r.addr, label: r.label, bytes: buf };
+    });
+    post({ type: "plan", regions: regions, checks: meta.checks }, bufs);
+  } finally {
+    run.destroy();
+    try { p.FS.unlink("/repo/build/installed.hxf"); } catch (e) { /* none */ }
+    try {
+      p.FS.readdir(dir).forEach(function (f) { if (f !== "." && f !== "..") p.FS.unlink(dir + "/" + f); });
+      p.FS.rmdir(dir);
+    } catch (e) { /* not made */ }
+  }
+}
+
 self.onmessage = function (e) {
+  if (e.data.plan) {
+    plan(e.data.installed).catch(function (err) {
+      post({ type: "planError", text: err && err.message ? err.message : String(err) });
+    });
+    return;
+  }
   build(e.data.stock, e.data.edition, e.data.names).catch(function (err) {
     post({ type: "error", text: err && err.message ? err.message : String(err) });
   });

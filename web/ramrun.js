@@ -1,4 +1,4 @@
-// ramrun.js - run a built firmware from the Stomp's RAM over WebUSB, the way
+// ramrun.js - run a built firmware from the unit's RAM over WebUSB (HX Stomp, HX Stomp XL, POD Go), the way
 // tools/hxf_ram.py does from a desktop: nothing is written to the Stomp, and
 // turning it off and on brings back what is installed (RAM_RUN.md).
 //
@@ -25,7 +25,8 @@
 (function (root) {
   "use strict";
 
-  var LINE6 = [{ vendorId: 0x0E41, productId: 0x4246 }, { vendorId: 0x0E41, productId: 0x4253 }];
+  var LINE6 = [{ vendorId: 0x0E41, productId: 0x4246 }, { vendorId: 0x0E41, productId: 0x4253 },
+               { vendorId: 0x0E41, productId: 0x424B }];   // POD Go (o.loader is then its own RAM loader)
   var DFU = [{ vendorId: 0x1FC9, productId: 0x000C }];
   var LOADER = [{ vendorId: 0x1209, productId: 0x0001 }];
 
@@ -86,7 +87,7 @@
     while (off + 8 <= buf.length) {
       var w0 = v.getUint32(off, true), w1 = v.getUint32(off + 4, true);
       var type = w0 >>> 28, len = w0 & 0xFFFF;
-      if (off + 8 + len > buf.length) throw fail("line6", "truncated message from the Stomp");
+      if (off + 8 + len > buf.length) throw fail("line6", "truncated message from the unit");
       var m = { type: type, src: w1 & 0xFFFF, dst: w1 >>> 16, flags: null }, p = off + 8;
       if (type === 2) { m.mtu = v.getUint32(p, true) >>> 16; p += 4; }
       if (off + 8 + len - p >= 8) {
@@ -146,18 +147,18 @@
   Stream.prototype.handle = function (m) {
     if (m.flags === null || (m.src & 0xFF) !== (REMOTE & 0xFF) || m.dst !== LOCAL) return;
     if (m.flags & F_SYN) {
-      if (this.rxSeq !== null) throw fail("line6", "unexpected SYN from the Stomp");
+      if (this.rxSeq !== null) throw fail("line6", "unexpected SYN from the unit");
       this.rxSeq = m.seq; this.peerWindow = m.window;
       return;
     }
-    if (this.rxSeq === null) throw fail("line6", "the Stomp answered before connecting");
-    if (((m.seq - this.rxSeq) & 0xFF) !== 1) throw fail("line6", "sequence gap from the Stomp");
+    if (this.rxSeq === null) throw fail("line6", "the unit answered before connecting");
+    if (((m.seq - this.rxSeq) & 0xFF) !== 1) throw fail("line6", "sequence gap from the unit");
     this.rxSeq = m.seq;
     if (m.flags & (F_DATA | F_WIN)) {
       this.peerWindow = m.window;
       if (m.flags & F_DATA && m.data.length) this.rx = concat([this.rx, m.data]);
     }
-    if (m.flags & F_FIN) throw fail("line6", "the Stomp closed the stream: it refused the request");
+    if (m.flags & F_FIN) throw fail("line6", "the unit closed the stream: it refused the request");
   };
   Stream.prototype.poll = function (ms) {
     var self = this;
@@ -170,7 +171,7 @@
     var self = this, end = Date.now() + seconds * 1000;
     return (function loop() {
       if (cond()) return Promise.resolve();
-      if (Date.now() > end || self.closed) return Promise.reject(fail("line6", "no answer from the Stomp (" + what + ")"));
+      if (Date.now() > end || self.closed) return Promise.reject(fail("line6", "no answer from the unit (" + what + ")"));
       return self.poll(100).then(loop);
     })();
   };
@@ -201,13 +202,13 @@
     var intf = dev.configuration.interfaces.filter(function (i) { return i.interfaceNumber === 0; })[0];
     var alt = intf && (intf.alternate || intf.alternates[0]);
     var bulk = alt ? alt.endpoints.filter(function (e) { return e.type === "bulk"; }) : [];
-    if (!alt || alt.interfaceClass !== 0xFF || bulk.length !== 2) throw fail("line6", "interface 0 is not the Stomp's message interface");
+    if (!alt || alt.interfaceClass !== 0xFF || bulk.length !== 2) throw fail("line6", "interface 0 is not the unit's message interface");
     try { await dev.claimInterface(0); }
     catch (e) { try { await dev.close(); } catch (e2) { /* closed */ } throw fail("busy", "cannot claim interface 0: " + e.message); }
     var epIn = bulk.filter(function (e) { return e.direction === "in"; })[0];
     var epOut = bulk.filter(function (e) { return e.direction === "out"; })[0];
     var st = new Stream(dev, epOut.endpointNumber, epIn.endpointNumber, epIn.packetSize, o.sleep, o.log);
-    o.log("Stomp " + hex(dev.productId, 4) + ": interface 0, OUT " + epOut.endpointNumber + ", IN " +
+    o.log("Line 6 unit " + hex(dev.productId, 4) + ": interface 0, OUT " + epOut.endpointNumber + ", IN " +
           epIn.endpointNumber + ", mtu " + epIn.packetSize + "\n");
     try {
       st.startReading();
@@ -234,8 +235,8 @@
       await st.send(F_WIN, null, "window update");
       await st.write(new Uint8Array([0xAA, 0, 0, 2]), "EnterUpdateMode");
       var res = new DataView((await st.read(4, "result")).buffer).getInt32(0, true);
-      if (res < 0) throw fail("line6", "the Stomp refused update mode (" + res + ")");
-      o.log("the Stomp restarts in update mode\n");
+      if (res < 0) throw fail("line6", "the unit refused update mode (" + res + ")");
+      o.log("the unit restarts in update mode\n");
     } finally {
       st.closed = true;
       try { await dev.releaseInterface(0); } catch (e) { /* it is resetting */ }
@@ -327,11 +328,11 @@
         var r = await vin(RB.REQ_EMMC_CRC, c[0] & 0xFFFF, c[0] >>> 16, 8);
         if (r.getUint32(4, true)) throw fail("emmc", "eMMC read failed at sector " + hex(c[0]));
         if (r.getUint32(0, true) !== c[2] >>> 0) {
-          throw fail("emmc", "entry " + c[3] + " on the Stomp is not the stock 3.80.0 firmware the build was made from");
+          throw fail("emmc", "entry " + c[3] + " on the unit is not the firmware the RAM run was planned against (" + (o.installed || "stock") + ")");
         }
         o.progress((k + 1) / plan.checks.length, "emmc");
       }
-      o.log("eMMC: the installed firmware matches stock 3.80.0 where the RAM run reads it\n");
+      o.log("eMMC: the installed firmware matches " + (o.installed || "stock") + " where the RAM run reads it\n");
     } else if (plan.checks.length) {
       o.log("eMMC: not checked (the RAM loader could not start it)\n");
     }
@@ -373,7 +374,7 @@
       var d = await present(o.usb, filters);
       if (d) { if (o.unask) o.unask(); return d; }
       if (clicked) break;
-      if (Date.now() > end) throw fail("gone", "the Stomp did not come back as the " + stage + " device");
+      if (Date.now() > end) throw fail("gone", "the unit did not come back as the " + stage + " device");
       await o.sleep(250);
     }
     try { return await o.usb.requestDevice({ filters: filters }); }
@@ -413,7 +414,7 @@
     o.stage("loader");
     await loaderRun(dev, o.plan, o);
     if (!(await gone(o, dev, 5))) throw fail("go", "the RAM loader is still on USB: it refused to start the firmware");
-    o.log("started: the firmware runs from RAM; turn the Stomp off and on to go back\n");
+    o.log("started: the firmware runs from RAM; turn the unit off and on to go back\n");
   }
 
   var api = { run: run, crc32: crc32, parseIn: parseIn, RB: RB, CODES: CODES, LINE6: LINE6, DFU: DFU, LOADER: LOADER };

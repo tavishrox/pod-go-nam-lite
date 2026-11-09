@@ -1,6 +1,6 @@
 # ToneShift Edition boot screen
 
-Lettering by **ToneShift**, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): use it, share
+Lettering by **ToneShift** (Mark Daniels, TavishRox), copyright (C) 2026 Mark Daniels, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): use it, share
 it, change it, with credit to ToneShift.
 
 These overlays hold only the green lettering on a transparent background, at the POD Go's screen size

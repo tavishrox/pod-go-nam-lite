@@ -26,7 +26,7 @@ which does the same for the HX Stomp, HX Stomp XL and HX Effects. The HX instruc
 - **Tone controls** after the capture (Bass, Mid with frequency and width, Treble, High Cut), **Input** to set
   how hard it's driven, and **Output**.
 - **The ToneShift Edition** (optional): a boot screen with ToneShift's "NAM A2 Edition" lettering over your POD Go's own splash.
-- **Free the fixed blocks.** [Preset templates](templates/) for NAM without the cab, FX loop or fixed EQ, and a
+- **Free the fixed blocks.** [Preset templates](templates/) for NAM without the cab, FX loop or fixed EQ (or just without the FX loop), and a
   [block helper](POD_GO.md#the-block-helper) to put an amp, cab, IR or FX loop into any empty block.
 
 ## How it works, in one paragraph
@@ -70,7 +70,7 @@ what happened).
 - **[hx-stomp-nam-lite](https://github.com/nocaseguy/hx-stomp-nam-lite)** by **Derek Bui**: the NAM kernel,
   converter, build tools and RAM loader this port is built on.
 - **[Neural Amp Modeler](https://www.neuralampmodeler.com)** by Steven Atkinson: the A2 model format.
-- **POD Go port**: ToneShift.
+- **POD Go port**: Mark Daniels (TavishRox, ToneShift). Copyright (C) 2026 Mark Daniels.
 
 GPL-3.0-or-later, as upstream. See [LICENSE](LICENSE) and [NOTICE](NOTICE). No Line 6 firmware, code, data or
 artwork is included or distributed, and no NAM captures.
