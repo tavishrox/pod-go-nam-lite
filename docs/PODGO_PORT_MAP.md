@@ -198,8 +198,8 @@ Consequences for the build (same shape as the Stomp's `expand_sharc_blob0_buffer
   `tests/test_podgo_e2.py` (with `PODGO_HXF=...`): 5 pass.
 - **On unit:** this Entry-2-only build (no NAM model yet) ran from RAM: eMMC check passed, the
   app came back on USB after 8.1 s. Listening test pending.
-- Input calibration: `STOMP_DBU` (11.5 dBu) is the Stomp's; the POD Go's input level at 0 dBFS
-  is not measured yet.
+- Input calibration: `STOMP_DBU` (11.5 dBu) is the Stomp's; the POD Go measured 11.44 dBu at 0 dBFS
+  (see "Input level"), so it stays.
 
 **On unit (2026-11-07):** the Entry-2-only build from RAM sounds and behaves normally across
 presets (owner's listening test).
@@ -312,17 +312,17 @@ Whatever owns `0x2c4000..` may grow toward NAM's areas with heavier presets: a p
 - On the unit: no 16/32-sample structure left (residual flat over phase mod 32). Against the numpy A2
   reference on the dry channel (a clean A2 Lite capture with cab, slot 4), after a 64-tap linear fit: -18.5 dB at +6 dB
   input (-14.0 dB at 0 dB; the dry signal itself fits to -13.0 dB). Before the fix: -0.4 dB.
-  Open: input calibration (STOMP_DBU is the Stomp's 11.5 dBu) and the tone stack settings in the comparison.
+  Open: the tone stack settings in the comparison (input calibration: measured since, see "Input level").
 
-## Input level (2026-11-08)
+## Input level (2026-11-08; measured 2026-11-09)
 
-No published POD Go figure (Line 6 lists none; the forum measurements are Helix/HX Stomp, about
-+11.4..11.5 dBu at 0 dBFS). The user has no meter or reference interface, so the kernel keeps
-STOMP_DBU = 11.5 dBu (the Helix family's figure). Input (Plexi Drive) trims it by ear: 0.4 dB a step,
-+-20 dB, 5.0 = 0 dB. The USB comparison (a clean capture, near linear) fits best with about +6 dB more
-input, but the fit is flat (-16..-18.5 dB from +3 to +12 dB): not a measurement.
-To measure later: a 200 Hz sine from the Mac's headphone jack, its AC volts read on a meter, then
-into the guitar input, read as dBFS on USB 3 (podgo/record_podgo.py); 0 dBFS = dBu + (-dBFS).
+**Measured: 11.44 dBu at full scale** (a sine whose peak reaches 0 dBFS), so STOMP_DBU = 11.5 dBu stays:
+the 0.06 dB difference is below the meter's accuracy. Method (`podgo/measure_input.py`): a 200 Hz sine at
+-20 dBFS from the AXE I/O's Amp Out (its output 5) read 51.9 mV AC on a Fluke 179 at the loose plug
+(-23.48 dBu; the Amp Out is low impedance, the POD Go input about 1 MOhm, so plugging in changes nothing
+measurable), then the same tone into the guitar input read -37.93 dBFS RMS on the dry USB channels 3/4:
+full scale = -23.48 - (-37.93 + 3.01) = 11.44 dBu. Same as the Helix family's published +11.4..11.5 dBu.
+Input (Plexi Drive) still trims it by ear: 0.4 dB a step, +-20 dB, 5.0 = 0 dB.
 
 ## Names on the unit, and the donor amp (2026-11-08)
 

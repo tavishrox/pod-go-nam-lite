@@ -250,8 +250,8 @@ It checks your file's MD5, builds the NAM code and runs it in a SHARC simulator 
 - **One NAM block per preset**: the POD Go has one amp block.
 - **POD Go Edit** shows the block as Line 6 Elektrik with Elektrik's knob names and DSP figure.
 - **Model shows a number**, not the capture's name.
-- **Input calibration** assumes the Helix family's input level (11.5 dBu at full scale); the POD Go's
-  has not been measured. If drive captures feel off, adjust Input.
+- **Input calibration** uses 11.5 dBu at full scale, the Helix family's figure; the POD Go measured
+  11.44 dBu, the same. If a drive capture still feels off, adjust Input.
 - **Firmware 2.50 only.** Another firmware version needs the build updated.
 
 ## What was different from the HX Stomp
