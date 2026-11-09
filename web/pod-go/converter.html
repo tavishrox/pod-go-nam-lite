@@ -97,6 +97,16 @@ section { display: grid; gap: 14px; }
 .slot label { font: 500 11px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .slot input { width: 72px; font: 500 16px/1 var(--mono); padding: 6px 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); color: var(--ink); text-align: right; }
 .model { font: 500 13px/1.2 var(--mono); }
+.rename { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; margin-top: 4px; }
+.rename label { font: 500 11px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.rename .pfx { font: 500 15px/1 var(--mono); color: var(--muted); }
+.rename input { flex: 1 1 auto; min-width: 0; width: 100%; font: 500 15px/1 var(--mono); padding: 6px 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); color: var(--ink); }
+.rename .count { font: 500 12px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.rename .count.full { color: var(--accent); }
+.rename-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+@media (max-width: 520px) { .rename { grid-template-columns: minmax(0, 1fr) auto; } .rename label { grid-column: 1 / -1; } }
+.dup { color: var(--bad); font-size: 13px; }
+.opt { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: var(--muted); }
 .model b { color: var(--accent); font-size: 16px; }
 .tag { font: 500 11px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--rule); border-radius: 4px; padding: 3px 5px; }
 @media (max-width: 520px) { .cap { grid-template-columns: 1fr; } .slot { justify-items: start; text-align: left; } }
@@ -153,6 +163,7 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
         <span>or click to choose. A2 Lite captures at 48 kHz; a file that holds several sizes gives its A2 Lite part.</span>
       </label>
       <input type="file" id="pick" accept=".nam,application/json" multiple hidden>
+      <label class="opt"><input type="checkbox" id="tagopt" checked><span>Start each name with <span class="mono">NAM</span> so captures stand out from real IRs in POD Go Edit</span></label>
       <div class="caps" id="caps"></div>
       <div class="row">
         <button class="btn" id="save" disabled>Download converted files</button>
@@ -160,13 +171,14 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
       </div>
       <div class="status" id="status" role="status"></div>
     </div>
+    <p class="note"><strong>Name each capture the way you want to see it.</strong> POD Go Edit names the IR after the file, and only about 20 characters fit, so the converter suggests a short name and counts the characters as you type. Letters, numbers, spaces and <span class="mono">- . ( ) + #</span> only.</p>
     <p class="note"><strong>Pick a slot for each capture now.</strong> The slot you type is only a reminder: the file goes into whichever IR slot you drop it on in POD Go Edit. The Model value next to it is what you then set on the NAM block. Use slots 1 to 101; the Model knob cannot reach 102 to 128.</p>
   </section>
 
   <section aria-labelledby="load-h">
     <h2 id="load-h">Put a capture on the POD Go</h2>
     <ol class="steps">
-      <li><div><h3>Unzip the download</h3><p>Double-click the <span class="mono">.zip</span> (Mac or Windows). Each capture is a <span class="mono">… NAM.wav</span> file. The " NAM" at the end tells you later which IR slots hold captures.</p></div></li>
+      <li><div><h3>Unzip the download</h3><p>Double-click the <span class="mono">.zip</span> (Mac or Windows). Each capture is a <span class="mono">.wav</span> file named as you set it above. The "NAM " at the start (unless you switched it off) tells you later which IR slots hold captures.</p></div></li>
       <li><div><h3>Import it in POD Go Edit</h3><p>Open POD Go Edit with the POD Go connected and open its IR list (the impulse responses, beside the preset list). Drag the <span class="mono">.wav</span> onto an empty slot, the slot you chose above. POD Go Edit stores the whole file; nothing is cut off.</p></div></li>
       <li><div><h3>Choose NAM A2 Lite as the amp</h3><p>In a preset, select the amp block and choose <b>NAM A2 Lite</b>. It sits in the amp list where Line 6 Elektrik used to be.</p>
         <ul><li>On the POD Go's screen it shows as NAM A2 Lite with its own knob names.</li><li>POD Go Edit still calls it "Line 6 Elektrik" and shows Elektrik's knob names. That's cosmetic: use the table below to know which is which.</li></ul></div></li>
@@ -511,7 +523,30 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
 
   function modelValue(slot) { return ((slot - 1) / 10).toFixed(1); }
   function baseName(f) { return f.replace(/\.nam$/i, ""); }
-  function wavName(c) { return baseName(c.file) + " NAM.wav"; }
+  // POD Go Edit takes the IR's name from the file name; about 20 characters show (Toneshift, on a POD Go Wireless).
+  var NAME_MAX = 20, TAG = "NAM ";
+  var tagOn = true;
+  function room() { return NAME_MAX - (tagOn ? TAG.length : 0); }
+  function clean(x) {                                   // what's safe in a file name and on the unit
+    return x.replace(/[_]+/g, " ").replace(/[^A-Za-z0-9 \-.()+#]/g, "").replace(/\s+/g, " ").replace(/^[ .]+/, "");
+  }
+  // "Mesa_JP2C_Crunch_NAM_A2_Lite_48k.nam" -> "Mesa JP2C Crunch": filler words out, then cut at a word if it's long.
+  function suggest(file) {
+    var n = clean(baseName(file).replace(/[-_]+/g, " "));
+    n = n.split(" ").filter(function (w) {
+      return !/^(nam|a2|lite|a2lite|capture|model|48k|48khz|wavenet|standard|v\d+)$/i.test(w);
+    }).join(" ").trim() || clean(baseName(file)).trim() || "Capture";
+    var max = room();
+    if (n.length <= max) return n;
+    var cut = n.slice(0, max), sp = n.charAt(max) === " " ? max : cut.lastIndexOf(" ");
+    return (sp >= max / 2 ? cut.slice(0, sp) : cut).trim();
+  }
+  function label(c) { return (tagOn ? TAG : "") + (c.label || "").trim(); }
+  function wavName(c) { return label(c) + ".wav"; }
+  function dupOf(c) {
+    var me = label(c).toLowerCase();
+    return caps.some(function (o) { return o !== c && !o.error && label(o).toLowerCase() === me; });
+  }
 
   // slot grid
   var g = $("slotgrid"), frag = document.createDocumentFragment();
@@ -542,7 +577,7 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
 
   function render() {
     capsEl.textContent = "";
-    var list = caps.length ? caps : [{ example: true, file: "My Clean Amp CAB.nam", slot: 4,
+    var list = caps.length ? caps : [{ example: true, file: "My Clean Amp CAB.nam", label: suggest("My Clean Amp CAB.nam"), slot: 4,
       info: { gear: "", modeledBy: "", inputDbu: 15, trimDb: -3.5, loudDb: 3.8 } }];
     list.forEach(function (c, i) {
       var el = document.createElement("div");
@@ -550,8 +585,37 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
       var left = document.createElement("div");
       left.style.minWidth = "0"; left.style.display = "grid"; left.style.gap = "3px";
       var nm = document.createElement("div"); nm.className = "name";
-      nm.textContent = c.example ? wavName(c) : (c.error ? c.file : wavName(c));
+      nm.textContent = c.file;
       left.appendChild(nm);
+      if (!c.error) {
+        var rn = document.createElement("div"); rn.className = "rename";
+        var nid = "name-" + i;
+        var rl = document.createElement("label"); rl.setAttribute("for", nid); rl.textContent = "Name";
+        var row = document.createElement("div"); row.className = "rename-row";
+        if (tagOn) { var px = document.createElement("span"); px.className = "pfx"; px.textContent = TAG.trim(); row.appendChild(px); }
+        var ni = document.createElement("input"); ni.type = "text"; ni.id = nid; ni.maxLength = room();
+        ni.value = c.label; ni.disabled = !!c.example; ni.spellcheck = false; ni.autocomplete = "off";
+        ni.setAttribute("aria-describedby", nid + "-n");
+        row.appendChild(ni);
+        var cnt = document.createElement("span"); cnt.className = "count"; cnt.id = nid + "-n";
+        var dup = document.createElement("div"); dup.className = "dup";
+        var upd = function () {
+          var n = label(c).length;
+          cnt.textContent = n + "/" + NAME_MAX; cnt.className = "count" + (n >= NAME_MAX ? " full" : "");
+          dup.textContent = !c.example && dupOf(c) ? "Same name as another capture: change one so you can tell them apart." : "";
+        };
+        ni.addEventListener("input", function () {
+          var v = clean(ni.value).slice(0, room());
+          if (v !== ni.value) { var pos = ni.selectionStart; ni.value = v; try { ni.setSelectionRange(pos - 1, pos - 1); } catch (e) {} }
+          c.label = v;
+          Array.prototype.forEach.call(capsEl.querySelectorAll(".rename"), function (r) { r._upd && r._upd(); });
+        });
+        ni.addEventListener("blur", function () { if (!c.label.trim()) { c.label = suggest(c.file); ni.value = c.label; upd(); } });
+        rn._upd = upd;
+        rn.appendChild(rl); rn.appendChild(row); rn.appendChild(cnt);
+        left.appendChild(rn); left.appendChild(dup);
+        upd();
+      }
       var mt = document.createElement("div");
       if (c.error) { mt.className = "err"; mt.textContent = c.error; }
       else { mt.className = "meta"; mt.textContent = (c.example ? "Example: your files appear here. " : "") + describe(c.info); }
@@ -594,6 +658,7 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
           c.wav = out.wav instanceof Uint8Array ? out.wav : new Uint8Array(out.wav);
           c.info = out.info;
           c.slot = nextSlot();
+          c.label = suggest(f.name);
         } catch (e) {
           c.error = e && e.message ? e.message : String(e);
         }
@@ -640,9 +705,15 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
     return new Blob(parts.concat(central, [new Uint8Array(end.buffer)]), { type: "application/zip" });
   }
 
+  // the download's file name: two captures with one name would overwrite each other, so later ones get " 2", " 3"
+  function fileFor(c, good) {
+    var me = label(c).toLowerCase(), n = 1;
+    for (var i = 0; i < good.length && good[i] !== c; i++) if (label(good[i]).toLowerCase() === me) n++;
+    return n === 1 ? wavName(c) : label(c).slice(0, NAME_MAX - 1 - String(n).length) + " " + n + ".wav";
+  }
   function slotNote(good) {
     return "IR slots and Model values (POD Go NAM A2 Lite)\r\n\r\n" + good.map(function (c) {
-      return "Slot " + c.slot + "  ->  Model " + modelValue(c.slot) + "   " + wavName(c);
+      return "Slot " + c.slot + "  ->  Model " + modelValue(c.slot) + "   " + fileFor(c, good);
     }).join("\r\n") + "\r\n\r\nImport each .wav into its slot with POD Go Edit, choose NAM A2 Lite as the amp, set Model, cab block off.\r\n";
   }
 
@@ -651,9 +722,9 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
     if (!good.length) return;
     if (inViewer) {
       if (!downloads) return;
-      var entries = good.map(function (c) { return { name: wavName(c), data: c.wav }; });
+      var entries = good.map(function (c) { return { name: fileFor(c, good), data: c.wav }; });
       entries.push({ name: "Slots and Model values.txt", data: new TextEncoder().encode(slotNote(good)) });
-      var name = good.length === 1 ? baseName(good[0].file) + " NAM.zip" : "POD Go NAM captures.zip";
+      var name = good.length === 1 ? label(good[0]) + ".zip" : "POD Go NAM captures.zip";
       downloads.save({ filename: name, data: zip(entries) }).then(function () {
         statusEl.className = "status ok"; statusEl.textContent = "Saved " + name + ". Unzip it, then import the .wav files with POD Go Edit.";
       }, function (e) {
@@ -665,12 +736,17 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
         setTimeout(function () {
           var a = document.createElement("a");
           a.href = URL.createObjectURL(new Blob([c.wav], { type: "audio/wav" }));
-          a.download = wavName(c); document.body.appendChild(a); a.click();
+          a.download = fileFor(c, good); document.body.appendChild(a); a.click();
           setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
         }, i * 400);
       });
       statusEl.className = "status ok"; statusEl.textContent = "Downloading " + good.length + " file" + (good.length === 1 ? "" : "s") + ".";
     }
+  });
+  $("tagopt").addEventListener("change", function (e) {
+    tagOn = e.target.checked;
+    caps.forEach(function (c) { if (c.label) c.label = c.label.slice(0, room()); });
+    render();
   });
   clearBtn.addEventListener("click", function () { caps = []; statusEl.textContent = ""; render(); });
 

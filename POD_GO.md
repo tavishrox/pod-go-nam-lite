@@ -68,7 +68,7 @@ Use the **[converter page](https://tavishrox.github.io/pod-go-nam-lite/web/pod-g
 your browser and uploads nothing. Or use the command-line tool:
 
 ```bash
-python3 tools/nam2ir.py "My Capture.nam" -o "My Capture NAM.wav"
+python3 tools/nam2ir.py "My Capture.nam" -o "NAM My Capture.wav"
 ```
 
 Both give byte-identical files, checked against captures playing on the unit.
