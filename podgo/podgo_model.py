@@ -76,6 +76,7 @@ DONORS = {
     'elektrik': ('HD2_AmpLine6Elektrik', 46, 0xda, 'Line 6 Elektrik', ELEKTRIK_LAYOUT),
 }
 DEFAULT_DONOR = 'elektrik'
+MODEL_NAMES = False     # build_podgo.py --model-names: the Model knob shows "<slot> <IR name>" (model_names.py)
 
 
 def use_donor(key):
@@ -103,6 +104,11 @@ def params(e3, info):
     slots = {p['name']: p['slot'] for p in donor['params']}
     spec = [(slot, DONOR, src, pid, disp, dflt) for slot, src, pid, disp, dflt in LAYOUT]
     out = kp.nam_params(e3, info, spec)
+    if MODEL_NAMES:
+        import model_names
+        model = [p for p in out if p['slot'] == next(s for s, _, _, d, _ in LAYOUT if d == 'Model')]
+        assert len(model) == 1
+        model[0]['meta'] = model_names.model_meta(model[0]['meta'])
     names = [p['name'] for p in donor['params']]
     assert [p['name'] for p in out] == names, f'{DONOR_SHOWN} has {names}'
     assert all(p['type'] == 3 for p in out), 'every knob is a float'
@@ -277,4 +283,7 @@ def build(l6ia_bytes, log=print):
     log(f'[+] Entry 3: model {DONOR_ID} ({DONOR}) carries {DISPLAY}: {len(nam)} knobs in its layout')
     new_e0 = entry0(kp.get_entry_swapped(l6ia_bytes, 0))
     log(f'[+] Entry 0: name index {DONOR_NI:#x} shown as {DISPLAY} (browser item and Table 2 row), DSP cost {DSP_COST}')
+    if MODEL_NAMES:
+        import model_names
+        new_e0 = model_names.entry0(new_e0, log=log)
     return {0: new_e0, 3: new_e3, 4: new_e4}

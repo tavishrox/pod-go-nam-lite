@@ -24,6 +24,9 @@ def test_md5s_and_options_match():
     assert js_value('OUT_NAME') == build_podgo.OUT_NAME
     assert js_value('BUILT_MD5_EDITION') == build_podgo.BUILT_MD5_EDITION
     assert js_value('OUT_NAME_EDITION') == build_podgo.OUT_NAME_EDITION
+    assert js_value('BUILT_MD5_NAMES') == build_podgo.BUILT_MD5_NAMES
+    assert js_value('BUILT_MD5_EDITION_NAMES') == build_podgo.BUILT_MD5_EDITION_NAMES
+    assert build_podgo.out_name(True, True) == 'POD_Go_v2.50.0_NAM_A2_Lite_Edition_Names.hxf'
     for path in js_value('EDITION_SOURCES'):
         assert os.path.exists(os.path.join(ROOT, path)), path
     assert {os.path.relpath(v[1], ROOT) for v in build_podgo.EDITION.values()} <= set(js_value('EDITION_SOURCES'))

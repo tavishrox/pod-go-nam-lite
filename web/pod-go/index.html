@@ -118,6 +118,7 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
         <div class="builder">
           <label class="opt"><input type="checkbox" id="fwedition"> <span><b>Add the NAM A2 Edition boot screen</b> (Toneshift's lettering, drawn over your POD Go's own boot screen)</span></label>
           <div class="edprev" id="edprev" hidden><img src="../../art/nam-a2-edition/wireless.png" alt="The NAM A2 Edition lettering"><span>Shown over the stock POD Go boot screen. The overlay holds only this lettering; your POD Go supplies the rest.</span></div>
+          <label class="opt"><input type="checkbox" id="fwnames"> <span><b>Show capture names on the Model knob</b> (e.g. "4 Mesa JP2C" instead of 0.3) · <i>experimental</i>: tested from RAM on a POD Go</span></label>
           <label class="drop" id="fwdrop" tabindex="0" for="fwpick">
             <strong>Drop POD_Go_v2.50.0_0x6e984472.hxf here</strong>
             <span>or click to choose · about 45 MB · it stays on this computer</span>
@@ -162,7 +163,7 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
         <tr><td>Bass · Mid · Treble</td><td>Bass · Mid · Treble</td><td>Tone stack after the capture, ±12 dB each</td></tr>
         <tr><td>High Cut</td><td>Presence</td><td>Top-end roll-off; 10 = open</td></tr>
         <tr><td>Output</td><td>Ch Vol</td><td>Block volume; 5.0 = unity</td></tr>
-        <tr><td>Model</td><td>Master</td><td>The IR slot: (slot − 1) ÷ 10</td></tr>
+        <tr><td>Model</td><td>Master</td><td>The IR slot: (slot − 1) ÷ 10. With the names option it reads as the slot and its name</td></tr>
         <tr><td>Mid Freq · Q</td><td>Sag · Ripple</td><td>Where the Mid knob works (150 Hz – 3 kHz) and how wide</td></tr>
         <tr><td>Polarity</td><td>Bias X</td><td>Inverts the phase above 5.0</td></tr>
       </tbody>
@@ -211,7 +212,9 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
         reset();
         url = URL.createObjectURL(new Blob([m.bytes], { type: "application/octet-stream" }));
         save.href = url; save.download = m.file; done.hidden = false;
-        if (m.pinned && m.edition) status("ok", "Verified: your POD Go firmware (NAM A2 Edition) is ready.", " It is byte for byte the project's Edition build (MD5 " + m.md5 + "): the build tested on a POD Go plus the boot screen. Download it, then install it with Line 6 Updater (step 3).");
+        var extra = m.names ? " with Model-knob names (experimental)" : "";
+        if (m.pinned && m.names) status("ok", "Verified: your POD Go firmware" + (m.edition ? " (NAM A2 Edition)" : "") + extra + " is ready.", " It is byte for byte the project's build" + extra + " (MD5 " + m.md5 + "): the tested build plus a small display change that only alters the Model knob's text. Download it, then install it with Line 6 Updater (step 3).");
+        else if (m.pinned && m.edition) status("ok", "Verified: your POD Go firmware (NAM A2 Edition) is ready.", " It is byte for byte the project's Edition build (MD5 " + m.md5 + "): the build tested on a POD Go plus the boot screen. Download it, then install it with Line 6 Updater (step 3).");
         else if (m.pinned) status("ok", "Verified: your POD Go firmware is ready.", " It is byte for byte the build the project tested on a POD Go (MD5 " + m.md5 + "). Download it, then install it with Line 6 Updater (step 3).");
         else status("bad", "Built, but not the tested file.", " Every checksum passed, but the result differs from the tested build (MD5 " + m.md5 + "). That shouldn't happen: please report it before installing.");
       } else if (m.type === "error") {
@@ -220,7 +223,7 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
         else status("bad", "The build stopped.", " Nothing was written. Check your internet connection (the tools download the first time) and try again; the technical details say what happened. " + m.text.slice(0, 300));
       }
     };
-    worker.postMessage({ stock: buf, edition: $("fwedition").checked }, [buf]);
+    worker.postMessage({ stock: buf, edition: $("fwedition").checked, names: $("fwnames").checked }, [buf]);
   }
   function fromFile(f) {
     if (!f) return;

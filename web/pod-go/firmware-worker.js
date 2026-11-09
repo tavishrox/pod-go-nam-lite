@@ -4,7 +4,8 @@
 // desktop build calls), l6ia_verify.py and hxf.py pack. The result's MD5 is compared with the build the
 // project tested (build_podgo.BUILT_MD5): a match means these are the very bytes that ran on a POD Go.
 //
-// Messages in:  { stock: ArrayBuffer, edition: bool }   (edition: the NAM A2 Edition boot screens, art/nam-a2-edition/,
+// Messages in:  { stock: ArrayBuffer, edition: bool, names: bool }   (names: the Model knob shows the IR's name, podgo/model_names.py)
+//   (edition: the NAM A2 Edition boot screens, art/nam-a2-edition/,
 //                                                       drawn over the boot screens of the user's own file)
 // Messages out: { type: "progress", step, of, text } | { type: "log", text }
 //               { type: "done", file, bytes: ArrayBuffer, md5, pinned } | { type: "error", text }
@@ -19,6 +20,8 @@ var KERNEL_ARGS = ["--mid-sweep", "--podgo", "--plexi", "--static-sdram", "--blo
 var OUT_NAME = "POD_Go_v2.50.0_NAM_A2_Lite.hxf";
 var BUILT_MD5_EDITION = "70cfd341bb4bf00422f7ea19c5b49e95";
 var OUT_NAME_EDITION = "POD_Go_v2.50.0_NAM_A2_Lite_Edition.hxf";
+var BUILT_MD5_NAMES = "2cb121444bfe5e4a9259903b7ea2dc83";
+var BUILT_MD5_EDITION_NAMES = "0b27b025a84fc4a6d7af77f72f85d5ea";
 var EDITION_SOURCES = ["podgo/splash.py", "art/nam-a2-edition/wired.png", "art/nam-a2-edition/wireless.png"];
 
 // What the build needs, relative to the repository root.
@@ -40,6 +43,7 @@ var SOURCES = [
   "podgo/build_podgo.py",
   "podgo/podgo_model.py",
   "podgo/podgo_e2.py",
+  "podgo/model_names.py",
 ];
 
 var DRIVER = [
@@ -56,13 +60,13 @@ var DRIVER = [
   "        if e.code not in (None, 0):",
   "            raise RuntimeError(out.getvalue() + str(e.code))",
   "    return out.getvalue()",
-  "def make(edition=False):",
+  "def make(edition=False, names=False):",
   "    import build_podgo, patch_amp",
   "    out = io.StringIO()",
   "    with contextlib.redirect_stdout(out):",
   "        data, _ = patch_amp.load_l6ia_from_any('/repo/build/stock.hxf')",
   "        image = build_podgo.make_image(data, open('/repo/build/nam_lite.asm').read(),",
-  "                                       splashes=build_podgo.EDITION if edition else None)",
+  "                                       splashes=build_podgo.EDITION if edition else None, model_names=names)",
   "    open('/repo/build/nam_lite.l6ia', 'wb').write(image)",
   "    return out.getvalue()",
 ].join("\n");
@@ -104,9 +108,11 @@ async function loadEdition(p) {
   editionLoaded = true;
 }
 
-async function build(stock, edition) {
+async function build(stock, edition, names) {
   var of = 6;
-  var outName = edition ? OUT_NAME_EDITION : OUT_NAME, pinnedMd5 = edition ? BUILT_MD5_EDITION : BUILT_MD5;
+  var outName = edition ? OUT_NAME_EDITION : OUT_NAME;
+  if (names) outName = outName.replace(".hxf", "_Names.hxf");
+  var pinnedMd5 = names ? (edition ? BUILT_MD5_EDITION_NAMES : BUILT_MD5_NAMES) : (edition ? BUILT_MD5_EDITION : BUILT_MD5);
   progress(1, of, "Loading the build tools (about 15 MB, once)…");
   var p = await boot();
   if (edition) await loadEdition(p);
@@ -133,7 +139,7 @@ async function build(stock, edition) {
     step(3, "Building the NAM kernel…", ["tools/sharc/nam_multi.py"].concat(KERNEL_ARGS, ["-o", "build/nam_lite.asm"]));
     progress(4, of, "Adding NAM A2 Lite to the model list…");
     post({ type: "log", text: "$ build_podgo.make_image\n" });
-    post({ type: "log", text: make(!!edition) });
+    post({ type: "log", text: make(!!edition, !!names) });
     var report = step(5, "Checking every checksum…", ["tools/l6ia_verify.py", "build/nam_lite.l6ia"]);
     if (report.indexOf("ALL OK") < 0) throw new Error("The built image failed its checksum check.");
     step(6, "Packing the file…", ["tools/hxf.py", "pack", "build/nam_lite.l6ia", "build/" + outName, "--donor", "build/stock.hxf"]);
@@ -147,11 +153,11 @@ async function build(stock, edition) {
     try { p.FS.unlink("/repo/build/" + f); } catch (e) { /* gone */ }
   });
   var buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-  post({ type: "done", file: outName, bytes: buf, md5: outMd5, pinned: outMd5 === pinnedMd5, edition: !!edition }, [buf]);
+  post({ type: "done", file: outName, bytes: buf, md5: outMd5, pinned: outMd5 === pinnedMd5, edition: !!edition, names: !!names }, [buf]);
 }
 
 self.onmessage = function (e) {
-  build(e.data.stock, e.data.edition).catch(function (err) {
+  build(e.data.stock, e.data.edition, e.data.names).catch(function (err) {
     post({ type: "error", text: err && err.message ? err.message : String(err) });
   });
 };

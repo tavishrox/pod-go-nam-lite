@@ -116,6 +116,14 @@ NAM's.
 | Polarity | Bias X | Inverts the phase above 5.0 |
 | (unused) | Bias | Nothing |
 
+### Capture names on the Model knob (experimental)
+
+Tick **Show capture names on the Model knob** on the setup page (or `--model-names` on the command line) and
+Model reads as the slot and the IR's name, e.g. **18 Tweed Drive L**, instead of 1.7. Only the text changes: the
+value, the sound, your presets and POD Go Edit are as before. Keep names short: the knob's space is narrow.
+A value in [brackets] is under snapshot control (as on any POD Go knob): handy, since each snapshot can pick
+a different capture.
+
 ### DSP use
 
 NAM takes about **28%** of the POD Go's DSP (measured on the unit). The unit counts it as **2,850** of

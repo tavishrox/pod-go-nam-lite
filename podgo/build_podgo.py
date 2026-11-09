@@ -2,10 +2,11 @@
 """Build POD Go 2.50 firmware with NAM A2 Lite in the amp list, on Line 6 Elektrik's identity.
 
     python3 podgo/build_podgo.py POD_Go_v2.50.0_0x6e984472.hxf [-o OUT.hxf] [--no-check]
-        [--donor elektrik|plexi] [--edition] [--splash IMG] [--splash-wireless IMG]
+        [--donor elektrik|plexi] [--edition] [--splash IMG] [--splash-wireless IMG] [--model-names]
 
 --edition: the "NAM A2 Edition" boot screens (art/nam-a2-edition/, by Toneshift), drawn over the boot screens
 of your own firmware file (no Line 6 artwork is in this repository). --splash IMG: a whole 480x272 image.
+--model-names (experimental): the NAM block's Model knob shows the slot and its IR's name (podgo/model_names.py).
 
 Unofficial and experimental: try it from RAM first (tools/hxf_ram.py run OUT --stock STOCK).
 Steps (docs/PODGO_PORT_MAP.md):
@@ -34,8 +35,21 @@ KERNEL_ARGS = ['--mid-sweep', '--podgo', '--plexi', '--static-sdram', '--block32
 OUT_NAME = 'POD_Go_v2.50.0_NAM_A2_Lite.hxf'
 OUT_NAME_EDITION = 'POD_Go_v2.50.0_NAM_A2_Lite_Edition.hxf'
 BUILT_MD5_EDITION = '70cfd341bb4bf00422f7ea19c5b49e95'                                    # the --edition build's .hxf
+# --model-names (experimental, podgo/model_names.py): the same builds with the Model knob's names
+BUILT_MD5_NAMES = '2cb121444bfe5e4a9259903b7ea2dc83'
+BUILT_MD5_EDITION_NAMES = '0b27b025a84fc4a6d7af77f72f85d5ea'
 EDITION = {'Splash': ('overlay', os.path.join(ROOT, 'art', 'nam-a2-edition', 'wired.png')),
            'Splash_Wireless': ('overlay', os.path.join(ROOT, 'art', 'nam-a2-edition', 'wireless.png'))}
+
+
+def pinned_md5(edition, names):
+    return {(False, False): BUILT_MD5, (True, False): BUILT_MD5_EDITION,
+            (False, True): BUILT_MD5_NAMES, (True, True): BUILT_MD5_EDITION_NAMES}[edition, names]
+
+
+def out_name(edition, names):
+    base = OUT_NAME_EDITION if edition else OUT_NAME
+    return base.replace('.hxf', '_Names.hxf') if names else base
 
 
 def run(*args):
@@ -48,7 +62,8 @@ def run(*args):
     return r.stdout
 
 
-def make_image(data, asm_src, asm_name='nam_lite_podgo_b32.asm', donor=None, splashes=None, log=print):
+def make_image(data, asm_src, asm_name='nam_lite_podgo_b32.asm', donor=None, splashes=None, log=print,
+               model_names=False):
     """The L6IA image with NAM A2 Lite: `data` the stock L6IA, `asm_src` the kernel (nam_multi.py's output).
     splashes: {'Splash' | 'Splash_Wireless': image path, or ('overlay', PNG) drawn over the stock screen}."""
     import kit_patch_amp as kp
@@ -56,6 +71,7 @@ def make_image(data, asm_src, asm_name='nam_lite_podgo_b32.asm', donor=None, spl
     import podgo_e2
     import podgo_model
     podgo_model.use_donor(donor or podgo_model.DEFAULT_DONOR)
+    podgo_model.MODEL_NAMES = bool(model_names)
     log(f'[+] NAM replaces {podgo_model.DONOR_SHOWN}')
     new = podgo_model.build(data, log=log)
     for name, path in (splashes or {}).items():          # a boot screen (podgo/splash.py): Entry 8 in place
@@ -83,7 +99,7 @@ def main():
     build = os.path.join(ROOT, 'build')
     os.makedirs(build, exist_ok=True)
     out = os.path.abspath(a[a.index('-o') + 1]) if '-o' in a else \
-        os.path.join(build, OUT_NAME_EDITION if '--edition' in a else OUT_NAME)
+        os.path.join(build, out_name('--edition' in a, '--model-names' in a))
     asm = os.path.join(build, 'nam_lite_podgo_b32.asm')
     meter = a[a.index('--meter') + 1] if '--meter' in a else None     # a test image (no check: it plays the meter)
     if meter:
@@ -97,7 +113,8 @@ def main():
     splashes.update({name: os.path.abspath(a[a.index(opt) + 1])
                      for opt, name in (('--splash', 'Splash'), ('--splash-wireless', 'Splash_Wireless')) if opt in a})
     image = make_image(data, open(asm).read(), os.path.basename(asm),
-                       donor=a[a.index('--donor') + 1] if '--donor' in a else None, splashes=splashes)
+                       donor=a[a.index('--donor') + 1] if '--donor' in a else None, splashes=splashes,
+                       model_names='--model-names' in a)
     img_path = os.path.join(build, 'POD_Go_v2.50.0_NAM_A2_Lite.l6ia')
     open(img_path, 'wb').write(image)
     report = run(sys.executable, 'tools/l6ia_verify.py', img_path)
@@ -106,8 +123,9 @@ def main():
     run(sys.executable, 'tools/hxf.py', 'pack', img_path, out, '--donor', stock)
     got = hashlib.md5(open(out, 'rb').read()).hexdigest()
     pinned = None if meter or '--donor' in a or (splashes and splashes != EDITION) else \
-        (BUILT_MD5_EDITION if splashes else BUILT_MD5)
-    print(f'\nDone: {out} (MD5 {got}' + (', the tested build' if got == pinned else
+        pinned_md5(bool(splashes), '--model-names' in a)
+    tested = ', the project build (Model names: experimental)' if '--model-names' in a else ', the tested build'
+    print(f'\nDone: {out} (MD5 {got}' + (tested if got == pinned else
                                          ', NOT the tested build: please report' if pinned else '') + ')')
     print(f'Try it from RAM first: python3 tools/hxf_ram.py run {os.path.relpath(out, ROOT)} --stock {a[0]}')
 

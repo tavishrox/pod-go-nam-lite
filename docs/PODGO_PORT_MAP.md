@@ -482,3 +482,22 @@ a second cab and a second amp are refused before writing. Gotchas: a preset stor
 model's type-6 IrData at slot 1001 must be left out, or the unit drops the chain); cab names exist as modern
 (26, 250 units) and legacy (15, 600) models, and amp names as amp and preamp (HD2_Preamp*): the helper labels
 preamps and picks the modern cab unless `add ir NAME`.
+
+## Model names (2026-11-09, ran on the unit from RAM)
+
+`build_podgo.py --model-names` (`podgo/model_names.py`, source `tools/arm/model_names_cave.s`): the Model knob
+reads "<slot> <IR name>" (e.g. "18 Tweed Drive L") instead of 1.7. UI only: the knob stays a float 0..1, so the
+kernel, presets and POD Go Edit are unchanged.
+- Entry 3 meta strings are matched by string index in Entry 0: 0x28cc8b20 maps `displayType` to an enum
+  (knob 5, list 9, dynamicList 12, ...). Only IR Select (an int) has dynamicList in stock.
+- The value formatter 0x28cc8f20 (r5 text, r6 its size, s16 the float) picks the float text through a TBH at
+  0x28cc9072 by display type - 1; dynamicList went to the plain-number path 0x28cc928e. The build marks Model
+  dynamicList and points that table entry at a 108-byte cave appended to segment 6 (0x28ce3fb8; nothing in the
+  app refers to that range). The cave: slot = TRUNC(100 v + 0.5) + 1 (as the kernel), itoa (0x28c706d4), a
+  space, then the name with strncpy (0x28c704d4) bounded by r6 and always terminated; out of 1..128 or a short
+  buffer takes the stock path.
+- The IR table: 0x282c6f94, 0x78 bytes a slot (0-based). The name (64 chars) is at +8 (0x28cbdf30 returns it);
+  +0x49 is an id string (0x28cbe034 returns that one: the first try showed "25 118bf5b7dc298").
+- Brackets round the value ("[18 Tweed Drive L]") are the stock sign of snapshot control (0x28ca55f8, from
+  0x28cb4794), not the patch.
+- MD5s pinned: 2cb12144 (Elektrik), 0b27b025 (Edition); the browser builder makes the same bytes.

@@ -3,6 +3,13 @@
 Major changes, newest first. The repository has no version numbers, so each entry is dated and names its commit. Status labels follow the README: "ran on" means a person ran that build on that unit.
 
 
+## 2026-11-09: POD Go Model-knob names (experimental)
+
+- `--model-names` (a tick box on the setup page): the NAM block's Model knob shows the slot and its IR's name
+  (`podgo/model_names.py`, `tools/arm/model_names_cave.s`; `docs/PODGO_PORT_MAP.md` "Model names"). Ran on a
+  POD Go Wireless from RAM. MD5s 2cb12144 (Elektrik) and 0b27b025 (Edition).
+- Converter: a Name box per capture (about 20 characters show in POD Go Edit).
+
 ## 2026-11-08: POD Go and POD Go Wireless (2.50)
 
 - `podgo/`: NAM A2 Lite for the POD Go, on Line 6 Elektrik's slot (`podgo/build_podgo.py`; guide `POD_GO.md`,
