@@ -404,12 +404,12 @@
     if (match(dev, LINE6)) {
       o.stage("reboot");
       await rebootToDfu(dev, o);
-      dev = await find(o, DFU, "dfu", 60);
+      dev = await find(o, DFU, "dfu", 600);
     }
     if (match(dev, DFU)) {
       o.stage("dfu");
       await dfuLoad(dev, o.loader, o);
-      dev = await find(o, LOADER, "loader", 60);
+      dev = await find(o, LOADER, "loader", 600);
     }
     o.stage("loader");
     await loaderRun(dev, o.plan, o);

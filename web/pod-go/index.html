@@ -127,6 +127,7 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
           <label class="drop" id="fwdrop" tabindex="0" for="fwpick">
             <strong>Drop POD_Go_v2.50.0_0x6e984472.hxf here</strong>
             <span>or click to choose · about 45 MB · it stays on this computer</span>
+            <span>Always the stock file, even if your POD Go already runs a NAM build: every build starts from your own copy of Line 6's file, because their code can't be shared.</span>
           </label>
           <input type="file" id="fwpick" accept=".hxf" hidden>
           <div class="fwstatus" id="fwstatus" role="status" hidden></div>
@@ -134,13 +135,14 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
           <details id="fwlogbox" hidden><summary>Technical details</summary><pre id="fwlog"></pre></details>
           <div class="trybox" id="ram" hidden>
             <h3>Optional: try it first, without installing</h3>
+            <p class="small"><b>Two files, two jobs:</b> the box above always takes Line 6's stock 2.50 file (every build starts from your own official copy, because Line 6's code can't be shared); the tick box below takes whatever your POD Go runs now, only if that isn't stock.</p>
             <p class="small">This page can run the firmware you just built from the POD Go's memory for one session. Nothing is written to the POD Go: turn it off and on and it starts what is installed, as before.</p>
             <ol>
               <li>Use <b>Chrome</b> or <b>Edge</b> on a computer, and <b>quit POD Go Edit and Line 6 Updater</b>: they hold the USB connection.</li>
               <li>Connect the POD Go with USB, turn it on and click <b>Run from RAM</b>. Pick the POD Go in the browser's list. As it restarts, the browser asks twice more: each time click <b>Continue</b> and pick the device it lists.</li>
               <li>If the POD Go isn't in the list, turn it off, <b>hold Page &gt; while you turn it on</b> (update mode), and click <b>Run from RAM</b> again.</li>
             </ol>
-            <label class="opt"><input type="checkbox" id="raminst"> <span>My POD Go already runs a NAM build from this page (not stock 2.50). Choose that .hxf: the run checks the POD Go against it.</span></label>
+            <label class="opt"><input type="checkbox" id="raminst"> <span><b>My POD Go isn't on stock 2.50</b> (it runs a NAM build I installed earlier). Tick this and choose the exact .hxf file you installed. The run checks your POD Go against it and won't start if it doesn't match.</span></label>
             <input type="file" id="raminstpick" accept=".hxf" hidden>
             <p class="small" id="raminstname" hidden></p>
             <p class="small">What you change during the run (presets, imported IRs) is gone when you turn the POD Go off, so import your captures with the normal firmware first. Knobs can react slowly from RAM; installed, they don't.</p>
@@ -308,8 +310,8 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
   }
   var STAGE = { reboot: "Asking the POD Go to restart in update mode…", dfu: "Sending the RAM loader…", loader: "Talking to the RAM loader…",
     emmc: "Checking the installed firmware…", upload: "Sending the firmware", start: "Starting the firmware…" };
-  var ASK = { dfu: "The POD Go is in update mode. Click Continue and pick it in the browser's list (it may show as an unknown device, 1fc9:000c).",
-    loader: "The RAM loader is running. Click Continue and pick it in the browser's list (an unknown device, 1209:0001)." };
+  var ASK = { dfu: "Step 2 of 3: the POD Go is in update mode (dark screen). Click the Continue button below, then pick the device in the browser's list (it may show as an unknown device, 1fc9:000c).",
+    loader: "Step 3 of 3: the RAM loader is running. Click the Continue button below, then pick it in the browser's list (an unknown device, 1209:0001)." };
   $("ramGo").addEventListener("click", async function () {
     if (busy || !window.podgoWorker) return;
     busy = true; $("ramGo").disabled = true; $("ramLog").textContent = ""; $("ramBar").style.width = "0%";

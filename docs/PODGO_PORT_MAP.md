@@ -473,7 +473,16 @@ kept whole. .pgp layout learned from exports: @type 0 effect, 1 amp, 5 stereo de
 Model is stored 0..1: 0.03 = IR slot 4 (shown 0.3).
 2026-11-09: NAM No FX Loop (wah, volume, NAM, cab HD2_Cab4X12CaliV30 @type 2 with @mic, fixed EQ
 HD2_EQ_STATIC_ParametricStereo @type 6 off: 3,886) and NAM No FX Loop or Cab (3,636): the stock layout without
-the loop, block types as stock exports store them. Not yet imported on the unit. Gotcha: Entry 3 int params' defaults are int bits in a float
+the loop, block types as stock exports store them. Not yet imported on the unit.
+
+## RAM run from the setup page (2026-11-09, on the unit)
+
+web/pod-go: the worker plans `hxf_ram.py plan` for the last build against stock or an installed .hxf;
+web/ramrun.js (shared with the Stomp page) knows 0e41:424b and takes the POD Go's loader
+(tools/ramboot/firmware-ramboot-podgo.dfu). On the POD Go Wireless with the ToneShift Edition (names)
+installed: reboot to update mode, loader, eMMC check, upload and start all worked from Chrome. Against stock
+by mistake, the eMMC check refused (entry 2) and nothing started. hxf_ram.py's app_of also accepts a POD Go
+application whose two eMMC functions match byte for byte (a --model-names build has another CRC). Gotcha: Entry 3 int params' defaults are int bits in a float
 word (Ratio 3 reads 4.2e-45): convert by type (2 int, 1 bool) or the unit drops the chain.
 
 ## Block helper (2026-11-08)

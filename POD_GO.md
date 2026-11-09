@@ -210,8 +210,11 @@ Presets and IRs stay on the unit.
 
 ### Try it first without installing
 
-`tools/hxf_ram.py` can run a build from the POD Go's memory for one session, installing nothing; a
-power-cycle brings back the installed firmware. This is how every build was tested. See
+The setup page's **Run from RAM** (Chrome or Edge, after a build) runs the new firmware from the POD Go's
+memory for one session, installing nothing; a power-cycle brings back the installed firmware. Build from the
+stock 2.50 file as always; if your POD Go already runs a NAM build, tick the box and choose the exact .hxf
+you installed, so the run checks the unit against it. Tried on a POD Go Wireless with the ToneShift Edition
+(names) installed. From the command line, `tools/hxf_ram.py` does the same. This is how every build was tested. See
 [RAM_RUN.md](RAM_RUN.md) and the POD Go notes in `docs/PODGO_PORT_MAP.md`; the POD Go needs its own
 loader, `tools/ramboot/firmware-ramboot-podgo.dfu` (`make podgo` in `src/ramboot`).
 
