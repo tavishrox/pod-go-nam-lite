@@ -5,7 +5,7 @@ POD Go's own DSP as an amp block, with your effects either side of it.
 
 [![NAM A2 Lite on the POD Go: launch video](https://img.youtube.com/vi/w9rP10gc9I0/hqdefault.jpg)](https://youtu.be/w9rP10gc9I0)
 
-▶️ **[Watch the launch video on YouTube](https://youtu.be/w9rP10gc9I0)** · 🌐 **[Setup page and capture converter](https://tavishrox.github.io/pod-go-nam-lite/)** · 📘 **[Step-by-step install guide](https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/how-to.html)** ([PDF](https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/POD-Go-NAM-Install-Guide.pdf))
+▶️ **[Watch the launch video](https://youtu.be/w9rP10gc9I0)** on [ToneShift](https://www.youtube.com/channel/UC8Fy07TKY0txLxOgj7edHCA) · 🌐 **[Setup page and capture converter](https://tavishrox.github.io/pod-go-nam-lite/)** · 📘 **[Step-by-step install guide](https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/how-to.html)** ([PDF](https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/POD-Go-NAM-Install-Guide.pdf))
 
 > **Unofficial and experimental.** Not affiliated with, endorsed by or supported by Line 6 or Yamaha Guitar
 > Group. Installing modified firmware is at your own risk and may void your warranty. Read
