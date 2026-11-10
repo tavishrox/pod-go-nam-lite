@@ -11,6 +11,9 @@ which does the same for the HX Stomp, HX Stomp XL and HX Effects. POD Go port by
 > Guitar Group. Installing modified firmware is at your own risk and may void your warranty. Read
 > [Install](#install) and [Recovery](#recovery) before you start.
 
+**New to this? Follow the [step-by-step install guide](https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/how-to.html)**
+(every click from a stock POD Go to your first capture; also as a [PDF](web/pod-go/POD-Go-NAM-Install-Guide.pdf)).
+
 **Status (2026-11-08):** built, tested and installed on one POD Go Wireless. Every check below passed
 on that unit. It has not yet been tried on a wired POD Go, which runs the same firmware file.
 

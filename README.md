@@ -4,7 +4,7 @@
 POD Go's own DSP as an amp block, with your effects either side of it.
 
 <!-- LAUNCH: the video link and thumbnail go here -->
-▶️ **Watch the launch video on [ToneShift](#)** · 🌐 **[Setup page and capture converter](https://tavishrox.github.io/pod-go-nam-lite/)**
+▶️ **Watch the launch video on [ToneShift](#)** · 🌐 **[Setup page and capture converter](https://tavishrox.github.io/pod-go-nam-lite/)** · 📘 **[Step-by-step install guide](https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/how-to.html)** ([PDF](https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/POD-Go-NAM-Install-Guide.pdf))
 
 > **Unofficial and experimental.** Not affiliated with, endorsed by or supported by Line 6 or Yamaha Guitar
 > Group. Installing modified firmware is at your own risk and may void your warranty. Read
@@ -40,7 +40,9 @@ the neural network on your guitar. You build the firmware yourself, from your ow
 
 ## Get started
 
-1. **Read the [POD Go guide](POD_GO.md)**: what's needed, building, installing, recovery, the knobs.
+1. **Follow the [step-by-step install guide](https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/how-to.html)**
+   (every click, also as a [PDF](web/pod-go/POD-Go-NAM-Install-Guide.pdf)), or read the [POD Go guide](POD_GO.md)
+   for the details: what's needed, building, installing, recovery, the knobs.
 2. **Build** the firmware: drop your stock `POD_Go_v2.50.0_0x6e984472.hxf` on the
    [setup page](https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/#build). It builds in your browser (nothing is uploaded)
    and says **Verified** when the result is byte for byte the tested build. Or on the command line:

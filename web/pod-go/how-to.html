@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>POD Go NAM Install Guide</title>
+<meta name="description" content="Step by step, every click: NAM A2 Lite on the Line 6 POD Go and POD Go Wireless, firmware 2.50.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #e9ebe8; --panel: #f6f7f5; --ink: #1a1d1f; --muted: #5d6468; --rule: #c9cdca;
+  --accent: #c2410c; --accent-ink: #ffffff; --ok: #2f7d4f; --warn: #a15c07; --bad: #b42318;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15181a; --panel: #1d2124; --ink: #e8ebe9; --muted: #9aa3a7; --rule: #343a3e;
+    --accent: #f0782f; --accent-ink: #1a0d05; --ok: #5cc28a; --warn: #e3a447; --bad: #f2786d; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15181a; --panel: #1d2124; --ink: #e8ebe9; --muted: #9aa3a7; --rule: #343a3e;
+  --accent: #f0782f; --accent-ink: #1a0d05; --ok: #5cc28a; --warn: #e3a447; --bad: #f2786d; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); padding: 28px 16px 64px; }
+.wrap { max-width: 820px; margin: 0 auto; display: grid; gap: 30px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(30px, 6vw, 44px); font-weight: 800; font-stretch: 85%; line-height: 1.04; }
+h2 { font-size: 23px; font-weight: 700; font-stretch: 90%; display: flex; gap: 12px; align-items: baseline; }
+h2 .n { font: 600 13px/1 var(--mono); color: var(--accent-ink); background: var(--accent); border-radius: 4px; padding: 5px 7px; }
+h3 { font-size: 16px; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); }
+code, kbd, .mono { font-family: var(--mono); font-size: 0.9em; }
+kbd { border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--panel); white-space: nowrap; }
+b.ui { font-weight: 600; background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 3px; padding: 0 3px; }
+.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.lead { color: var(--muted); font-size: 16px; }
+header, section { display: grid; gap: 14px; }
+section { border-top: 1px solid var(--rule); padding-top: 22px; }
+ol.steps { margin: 0; padding-left: 0; list-style: none; counter-reset: s; display: grid; gap: 10px; }
+ol.steps > li { counter-increment: s; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; }
+ol.steps > li::before { content: counter(s); font: 600 13px/26px var(--mono); text-align: center; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--accent); color: var(--accent); }
+ol.steps > li > div { padding-top: 2px; display: grid; gap: 4px; }
+ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.note, .warn, .ok { border-left: 4px solid var(--muted); background: var(--panel); border-radius: 0 8px 8px 0; padding: 12px 14px; display: grid; gap: 6px; }
+.warn { border-color: var(--warn); }
+.ok { border-color: var(--ok); }
+.bad { color: var(--bad); font-weight: 600; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 600; color: var(--muted); }
+.tablewrap { overflow-x: auto; }
+.links td:first-child { white-space: nowrap; font-weight: 600; }
+.links td a { word-break: break-all; }
+.check { list-style: none; padding: 0; }
+.check li::before { content: "☐ "; font-family: var(--mono); }
+.toc { columns: 2 240px; padding-left: 20px; display: block; }
+footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-top: 1px solid var(--rule); padding-top: 18px; }
+.btnrow { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn { display: inline-block; background: var(--accent); color: var(--accent-ink); text-decoration: none; font-weight: 600; padding: 9px 14px; border-radius: 8px; }
+.btn.ghost { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+@media print {
+  :root { --bg: #fff; --panel: #f4f5f3; }
+  body { padding: 0; font-size: 11.5pt; }
+  .btnrow { display: none; }
+  section { break-inside: auto; }
+  h2, h3 { break-after: avoid; }
+  ol.steps > li, .note, .warn, .ok, tr { break-inside: avoid; }
+  a { color: var(--ink); }
+  .links td a { color: var(--accent); }
+}
+@page { size: A4; margin: 16mm 14mm; }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+<header>
+  <p class="eyebrow">NAM A2 Lite for POD Go · install guide</p>
+  <h1>Putting NAM on your POD Go, one click at a time</h1>
+  <p class="lead">Every step from a stock POD Go to playing your first NAM capture: back up, get Line 6's official file,
+    build the NAM firmware in your browser, install it, convert a capture and load it. About 20 minutes.
+    For the POD Go and POD Go Wireless on firmware 2.50.</p>
+  <div class="btnrow">
+    <a class="btn" href="https://tavishrox.github.io/pod-go-nam-lite/">Open the setup page</a>
+    <a class="btn ghost" href="POD-Go-NAM-Install-Guide.pdf" download>Download this guide (PDF)</a>
+  </div>
+  <div class="warn">
+    <p><b>Unofficial and experimental.</b> Not made or supported by Line 6 or Yamaha Guitar Group. Installing
+      modified firmware is at your own risk and may void your warranty. Back up first (step 1). If anything goes
+      wrong, step 9 always brings back the normal firmware: the mod never touches the POD Go's bootloader.</p>
+  </div>
+</header>
+
+<section>
+  <h2>Contents</h2>
+  <ol class="toc" start="0">
+    <li><a href="#need">What you need</a></li>
+    <li><a href="#backup">Back up your POD Go</a></li>
+    <li><a href="#stock">Download Line 6's firmware 2.50</a></li>
+    <li><a href="#build">Build the NAM firmware</a></li>
+    <li><a href="#ram">Optional: try it without installing</a></li>
+    <li><a href="#install">Install it with Line 6 Updater</a></li>
+    <li><a href="#convert">Convert your captures</a></li>
+    <li><a href="#import">Put a capture on the POD Go</a></li>
+    <li><a href="#play">Set up a preset and play</a></li>
+    <li><a href="#recover">Going back to normal (recovery)</a></li>
+    <li><a href="#help">Getting help</a></li>
+    <li><a href="#links">All the links</a></li>
+  </ol>
+</section>
+
+<section id="need">
+  <h2><span class="n">0</span> What you need</h2>
+  <ul class="check">
+    <li>A <b>POD Go</b> or <b>POD Go Wireless</b>. If it isn't on firmware 2.50 yet, update it to 2.50 with Line 6 Updater first, the normal way.</li>
+    <li>A <b>Mac or Windows computer</b> and the POD Go's <b>USB cable</b>.</li>
+    <li><b>Chrome</b> or <b>Edge</b> on that computer (Chrome is what this guide shows).</li>
+    <li><b>Line 6 Updater</b> and <b>POD Go Edit</b>, both free from <a href="https://line6.com/software/">line6.com/software</a>.</li>
+    <li>One or more <b>NAM captures</b> in the <b>A2 Lite</b> size, trained at <b>48 kHz</b> (<code>.nam</code> files).</li>
+  </ul>
+  <div class="note">
+    <p><b>Why you build it yourself.</b> The NAM firmware contains Line 6's own code, which can't be shared. So nobody
+      downloads a finished file: you download Line 6's official file, and the setup page adds NAM to it on your own
+      computer. Nothing is uploaded. For the same reason, <b>never share your built firmware file</b>.</p>
+  </div>
+</section>
+
+<section id="backup">
+  <h2><span class="n">1</span> Back up your POD Go</h2>
+  <p>Your presets and IRs normally stay through the update, but take a backup first anyway.</p>
+  <ol class="steps">
+    <li><div><p>Connect the POD Go to the computer with USB and turn it on.</p></div></li>
+    <li><div><p>Open <b>POD Go Edit</b> and wait until it shows your presets.</p></div></li>
+    <li><div><p>Choose POD Go Edit's <b class="ui">Backup</b> option, give the backup a name and click <b class="ui">Create Backup</b>.</p></div></li>
+    <li><div><p>Wait for <b class="ui">Backup completed successfully!</b> and click <b class="ui">OK</b>.</p></div></li>
+    <li><div><p><b>Quit POD Go Edit</b> (<kbd>⌘ Q</kbd> on a Mac, close the window on Windows). It holds the USB
+      connection, and the next steps need it free.</p></div></li>
+  </ol>
+</section>
+
+<section id="stock">
+  <h2><span class="n">2</span> Download Line 6's firmware 2.50</h2>
+  <p>This is the official file the NAM firmware is built from. It is also your way back, so keep it.</p>
+  <ol class="steps">
+    <li><div><p>Go to <a href="https://line6.com/software/">line6.com/software</a>. If a cookie box appears, choose whichever option you like.</p></div></li>
+    <li><div><p>In <b class="ui">- Choose Hardware -</b> pick <b class="ui">POD Go</b> (or <b class="ui">POD Go Wireless</b>).</p></div></li>
+    <li><div><p>In <b class="ui">- Choose Software -</b> pick <b class="ui">Firmware</b>.</p></div></li>
+    <li><div><p>In <b class="ui">- Choose OS -</b> pick <b class="ui">macOS</b> or <b class="ui">Windows</b>, then click <b class="ui">Go</b>.</p></div></li>
+    <li><div><p>In the results, open <b class="ui">POD Go Firmware · Version 2.50.0</b> and click its download link.</p></div></li>
+    <li><div><p>Line 6 shows its licence agreement. Read it and accept it; the download starts.</p></div></li>
+    <li><div>
+      <p>You now have <code>POD_Go_v2.50.0_0x6e984472.hxf</code> (about 45 MB) in your <b>Downloads</b> folder.
+        Leave it there or move it somewhere safe.</p>
+    </div></li>
+  </ol>
+</section>
+
+<section id="build">
+  <h2><span class="n">3</span> Build the NAM firmware</h2>
+  <ol class="steps">
+    <li><div><p>In Chrome, open the setup page: <a href="https://tavishrox.github.io/pod-go-nam-lite/">tavishrox.github.io/pod-go-nam-lite</a>.</p></div></li>
+    <li><div><p>Scroll down to <b class="ui">Setting it up</b>, step 2, <b class="ui">Build the NAM firmware</b>.</p></div></li>
+    <li><div>
+      <p>Choose your options (both are optional; leave them unticked for the plain build):</p>
+      <ul>
+        <li><b class="ui">ToneShift Edition</b>: adds the "NAM A2 Edition" lettering to the POD Go's boot screen.</li>
+        <li><b class="ui">Show capture names on the Model knob</b> (experimental): the Model knob shows, say, "4 Mesa JP2C" instead of 0.3.</li>
+      </ul>
+    </div></li>
+    <li><div><p>Drag <code>POD_Go_v2.50.0_0x6e984472.hxf</code> from your Downloads folder onto the box that says
+      <b class="ui">Drop POD_Go_v2.50.0_0x6e984472.hxf here</b>. Or click the box and choose the file.</p>
+      <p><b>Always the stock file from step 2</b>, even if your POD Go already runs a NAM build.</p></div></li>
+    <li><div><p>Wait. The first build downloads the build tools (about 15 MB) and takes 30 to 90 seconds.
+      <b>Keep the tab open</b> until it finishes.</p></div></li>
+    <li><div>
+      <div class="ok"><p>It says <b>Verified: your POD Go firmware is ready.</b> "Verified" means every byte matches the
+        build that was tested on a POD Go.</p></div>
+    </div></li>
+    <li><div><p>Click <b class="ui">Download firmware</b>. Chrome saves a file whose name starts
+      <code>POD_Go_v2.50.0_NAM_A2_Lite</code> to your Downloads folder.</p></div></li>
+  </ol>
+  <div class="note">
+    <h3>If it doesn't say Verified</h3>
+    <ul>
+      <li><span class="bad">This isn't the stock POD Go 2.50 firmware.</span> You dropped a different file, perhaps a NAM
+        build from earlier. Use the file from step 2.</li>
+      <li><span class="bad">That doesn't look like the POD Go firmware file.</span> or <span class="bad">That's a NAM
+        capture, not firmware.</span> Wrong file: captures go in the converter (step 6).</li>
+      <li><span class="bad">Open this page from its web address to build.</span> You opened a saved copy of the page.
+        Use the link above.</li>
+      <li><span class="bad">The build stopped.</span> Reload the page and try again; if it happens twice, see step 10.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="ram">
+  <h2><span class="n">4</span> Optional: try it without installing</h2>
+  <p>The setup page can run the firmware you just built from the POD Go's memory for one session. Nothing is written to
+    the POD Go: turn it off and on and it starts the firmware it had before. Skip to step 5 if you just want to install.</p>
+  <ol class="steps">
+    <li><div><p>Make sure <b>POD Go Edit</b> and <b>Line 6 Updater</b> are both closed.</p></div></li>
+    <li><div><p>Connect the POD Go with USB and turn it on.</p></div></li>
+    <li><div><p>If your POD Go already runs a NAM build you installed earlier, tick <b class="ui">My POD Go isn't on stock
+      2.50</b> and choose that exact <code>.hxf</code> file. Otherwise leave it unticked.</p></div></li>
+    <li><div><p>Click <b class="ui">Run from RAM</b>. Chrome lists USB devices: click your <b>POD Go</b>, then
+      <b class="ui">Connect</b>.</p></div></li>
+    <li><div><p>The POD Go restarts. When the page asks, click <b class="ui">Continue</b>, then pick the device Chrome lists
+      and click <b class="ui">Connect</b>. This happens <b>twice</b>.</p></div></li>
+    <li><div><div class="ok"><p>It says <b>Running from RAM.</b> Play: everything works as installed, but knobs can react a
+      little slowly from RAM.</p></div></div></li>
+    <li><div><p>Done trying? Turn the POD Go off and on. It's back on its installed firmware.</p></div></li>
+  </ol>
+  <div class="note">
+    <ul>
+      <li><b>POD Go not in Chrome's list?</b> Turn it off, hold <kbd>Page &gt;</kbd> while you turn it on (update mode),
+        and click <b class="ui">Run from RAM</b> again.</li>
+      <li><span class="bad">The POD Go is busy.</span> POD Go Edit or Line 6 Updater is still open: quit it.</li>
+      <li><span class="bad">The installed firmware isn't the one expected.</span> The tick box in item 3 doesn't match
+        what's on the POD Go. Tick it and choose the exact file you installed, or untick it if you're on stock.</li>
+      <li>Presets and IRs you change during the run are lost when you turn it off.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="install">
+  <h2><span class="n">5</span> Install it with Line 6 Updater</h2>
+  <ol class="steps">
+    <li><div><p>Turn the POD Go off and on, so it's running its installed firmware. Keep it connected with USB.</p></div></li>
+    <li><div><p>Make sure <b>POD Go Edit is closed</b>.</p></div></li>
+    <li><div><p>Open <b>Line 6 Updater</b>. Sign in with your Line 6 account if it asks.</p></div></li>
+    <li><div><p>Under <b class="ui">Select device to update</b>, click your <b>POD Go</b>.</p></div></li>
+    <li><div><p>Click <b class="ui">Local file</b>, then <b class="ui">Choose File</b>, and pick the file you downloaded in
+      step 3: the one whose name starts <code>POD_Go_v2.50.0_NAM_A2_Lite</code> (not the stock file).</p></div></li>
+    <li><div><p>Click <b class="ui">Update</b>. Read Line 6's notes and click <b class="ui">Continue</b> or
+      <b class="ui">OK</b> when asked.</p></div></li>
+    <li><div>
+      <div class="warn"><p><b>Don't unplug or turn off the POD Go</b> until the update has finished, the POD Go has
+        restarted and Line 6 Updater says it's done. It takes a few minutes.</p></div>
+    </div></li>
+    <li><div><p>Click <b class="ui">Done</b> and quit Line 6 Updater.</p></div></li>
+  </ol>
+  <div class="ok"><p><b>Check it worked:</b> on the POD Go, select a preset's amp block and scroll the amp list. You'll find
+    <b>NAM A2 Lite</b> where Line 6 Elektrik used to be. Your presets and IRs are still there.</p></div>
+</section>
+
+<section id="convert">
+  <h2><span class="n">6</span> Convert your captures</h2>
+  <p>The POD Go can't load <code>.nam</code> files, but it can store IRs, so each capture is packed into an IR-sized
+    <code>.wav</code> file.</p>
+  <ol class="steps">
+    <li><div><p>Open the converter: <a href="https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/converter.html">tavishrox.github.io/pod-go-nam-lite/web/pod-go/converter.html</a>.</p></div></li>
+    <li><div><p>Drag your <code>.nam</code> files onto <b class="ui">Drop .nam files here</b> (or click it and choose them).
+      You can drop several at once.</p></div></li>
+    <li><div><p>Each capture gets a row. In <b class="ui">Name</b>, type the name you want to see in POD Go Edit
+      (about 20 characters fit; the counter shows how many you've used).</p></div></li>
+    <li><div><p>Leave <b class="ui">Start each name with NAM</b> ticked, so captures stand out from real IRs later.</p></div></li>
+    <li><div><p>In <b class="ui">IR slot</b>, type the IR slot you'll put it in (1 to 101). Note the <b>Model</b> value
+      shown next to it: that's what you'll set on the NAM block.</p></div></li>
+    <li><div><p>Click <b class="ui">Download converted files</b> (<b class="ui">Download converted file</b> for one) and
+      unzip the download if it's a <code>.zip</code>.</p></div></li>
+  </ol>
+  <div class="note"><p><b>Refused?</b> The converter says why. It takes only <b>A2 Lite</b> captures trained at
+    <b>48 kHz</b>. Standard, Lite, Feather, Nano and A2 Full captures won't fit on the POD Go.</p></div>
+</section>
+
+<section id="import">
+  <h2><span class="n">7</span> Put a capture on the POD Go</h2>
+  <ol class="steps">
+    <li><div><p>Connect the POD Go, turn it on and open <b>POD Go Edit</b>.</p></div></li>
+    <li><div><p>Open the <b>IR list</b> (the impulse responses, beside the preset list).</p></div></li>
+    <li><div><p>Drag the converted <code>.wav</code> onto the empty slot you chose in step 6. (Or select the slot, choose
+      <b class="ui">Import...</b> and pick the file.)</p></div></li>
+  </ol>
+  <div class="warn"><p><b>Never pick a NAM slot in a cab or IR block.</b> Played as an IR, a capture file is harsh noise.
+    Only the NAM block's Model knob should point at it.</p></div>
+</section>
+
+<section id="play">
+  <h2><span class="n">8</span> Set up a preset and play</h2>
+  <h3>Quickest: import a ready-made template</h3>
+  <ol class="steps">
+    <li><div><p>Download a template from the <a href="#links">links below</a>. <b>NAM Essentials</b> is a good first one.</p></div></li>
+    <li><div><p>In POD Go Edit's preset list, select a preset slot you don't mind replacing, choose
+      <b class="ui">Import...</b> and pick the <code>.pgp</code> file.</p></div></li>
+    <li><div><p>The templates play <b>IR slot 4</b>. Put a capture in slot 4 (step 7), or set Model to your own slot.</p></div></li>
+  </ol>
+  <h3>Or add NAM to your own preset</h3>
+  <ol class="steps">
+    <li><div><p>Select the amp block and choose <b>NAM A2 Lite</b>. In POD Go Edit it still shows as
+      <b>Line 6 Elektrik</b> with Elektrik's knob names; the POD Go shows NAM's. That's only cosmetic.</p></div></li>
+    <li><div>
+      <p>Set <b>Model</b> (Elektrik's <b>Master</b> in POD Go Edit) to your slot: slot number minus one, divided by ten.</p>
+      <div class="tablewrap"><table>
+        <tr><th>IR slot</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>10</td><td>11</td><td>12</td><td>50</td><td>101</td></tr>
+        <tr><th>Model</th><td>0.0</td><td>0.1</td><td>0.2</td><td>0.3</td><td>0.4</td><td>0.9</td><td>1.0</td><td>1.1</td><td>4.9</td><td>10.0</td></tr>
+      </table></div>
+      <p>An empty slot keeps the block silent.</p>
+    </div></li>
+    <li><div><p><b>Turn the cab block off</b> if the capture includes a cab (most do: look for "CAB" in its name). Keep a cab
+      on for "DI" or amp-only captures.</p></div></li>
+    <li><div><p>Leave <b>Input</b> at 5.0 (as recorded) and <b>Output</b> at 5.0 (unity) to start, then save the preset and play.</p></div></li>
+  </ol>
+  <div class="tablewrap"><table>
+    <thead><tr><th>On the POD Go</th><th>In POD Go Edit</th><th>What it does</th></tr></thead>
+    <tr><td>Input</td><td>Drive</td><td>Level into the capture, ±20 dB; 5.0 = as recorded</td></tr>
+    <tr><td>Bass · Mid · Treble</td><td>Bass · Mid · Treble</td><td>Tone stack after the capture, ±12 dB each</td></tr>
+    <tr><td>High Cut</td><td>Presence</td><td>Top-end roll-off; 10 = open</td></tr>
+    <tr><td>Output</td><td>Ch Vol</td><td>Block volume; 5.0 = unity</td></tr>
+    <tr><td>Model</td><td>Master</td><td>Which IR slot plays</td></tr>
+    <tr><td>Mid Freq · Q</td><td>Sag · Ripple</td><td>Where the Mid knob works (150 Hz to 3 kHz) and how wide</td></tr>
+    <tr><td>Polarity</td><td>Bias X</td><td>Flips the phase above 5.0; leave at 5.0 or below</td></tr>
+  </table></div>
+</section>
+
+<section id="recover">
+  <h2><span class="n">9</span> Going back to normal (recovery)</h2>
+  <p>Use this if the POD Go stops at the boot screen, an update fails, or you simply want the stock firmware back.</p>
+  <ol class="steps">
+    <li><div><p>Turn the POD Go off.</p></div></li>
+    <li><div><p>Hold <kbd>Page &gt;</kbd> and turn it on. Keep holding until it's in update mode.</p></div></li>
+    <li><div><p>Open <b>Line 6 Updater</b>, click your POD Go, then <b class="ui">Local file</b> &rsaquo;
+      <b class="ui">Choose File</b>, and pick the stock <code>POD_Go_v2.50.0_0x6e984472.hxf</code> from step 2.</p></div></li>
+    <li><div><p>Click <b class="ui">Update</b> and wait until it's done. Don't unplug.</p></div></li>
+  </ol>
+  <p>The mod never touches the bootloader, so this always works. To restore presets and IRs, use POD Go Edit's
+    <b class="ui">Restore From Backup</b> with the backup from step 1.</p>
+</section>
+
+<section id="help">
+  <h2><span class="n">10</span> Getting help</h2>
+  <p>Open an issue on GitHub so others can find the answer too:
+    <a href="https://github.com/tavishrox/pod-go-nam-lite/issues/new/choose">github.com/tavishrox/pod-go-nam-lite/issues</a>.
+    Say whether you have a POD Go or POD Go Wireless, what you did and what happened (a photo of the screen helps).
+    <b>Never attach firmware files.</b></p>
+</section>
+
+<section id="links">
+  <h2><span class="n">11</span> All the links</h2>
+  <div class="tablewrap"><table class="links">
+    <tr><td>Setup page</td><td><a href="https://tavishrox.github.io/pod-go-nam-lite/">https://tavishrox.github.io/pod-go-nam-lite/</a></td></tr>
+    <tr><td>Converter</td><td><a href="https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/converter.html">https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/converter.html</a></td></tr>
+    <tr><td>This guide</td><td><a href="https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/how-to.html">https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/how-to.html</a></td></tr>
+    <tr><td>Guide (PDF)</td><td><a href="https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/POD-Go-NAM-Install-Guide.pdf">https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/POD-Go-NAM-Install-Guide.pdf</a></td></tr>
+    <tr><td>Line 6 downloads</td><td><a href="https://line6.com/software/">https://line6.com/software/</a></td></tr>
+    <tr><td>Template: NAM Blank</td><td><a href="https://tavishrox.github.io/pod-go-nam-lite/templates/NAM%20Blank.pgp">…/templates/NAM Blank.pgp</a></td></tr>
+    <tr><td>Template: NAM Essentials</td><td><a href="https://tavishrox.github.io/pod-go-nam-lite/templates/NAM%20Essentials.pgp">…/templates/NAM Essentials.pgp</a></td></tr>
+    <tr><td>Template: NAM Full Board</td><td><a href="https://tavishrox.github.io/pod-go-nam-lite/templates/NAM%20Full%20Board.pgp">…/templates/NAM Full Board.pgp</a></td></tr>
+    <tr><td>Template: No FX Loop</td><td><a href="https://tavishrox.github.io/pod-go-nam-lite/templates/NAM%20No%20FX%20Loop.pgp">…/templates/NAM No FX Loop.pgp</a></td></tr>
+    <tr><td>Template: No FX Loop or Cab</td><td><a href="https://tavishrox.github.io/pod-go-nam-lite/templates/NAM%20No%20FX%20Loop%20or%20Cab.pgp">…/templates/NAM No FX Loop or Cab.pgp</a></td></tr>
+    <tr><td>Full guide</td><td><a href="https://github.com/tavishrox/pod-go-nam-lite/blob/main/POD_GO.md">https://github.com/tavishrox/pod-go-nam-lite/blob/main/POD_GO.md</a></td></tr>
+    <tr><td>Code</td><td><a href="https://github.com/tavishrox/pod-go-nam-lite">https://github.com/tavishrox/pod-go-nam-lite</a></td></tr>
+    <tr><td>Report a problem</td><td><a href="https://github.com/tavishrox/pod-go-nam-lite/issues/new/choose">https://github.com/tavishrox/pod-go-nam-lite/issues/new/choose</a></td></tr>
+  </table></div>
+</section>
+
+<footer>
+  <p>Built on <a href="https://github.com/nocaseguy/hx-stomp-nam-lite">hx-stomp-nam-lite</a> by Derek Bui.
+    Neural Amp Modeler by Steven Atkinson. POD Go port and this guide © 2026 Mark Daniels (TavishRox, ToneShift).
+    GPL-3.0-or-later.</p>
+  <p>Line 6, POD Go and Helix are trademarks of Yamaha Guitar Group, Inc., used here only to say what this works with.
+    No Line 6 firmware, code or artwork is included. Tested on a POD Go Wireless; the wired POD Go uses the same firmware file.</p>
+</footer>
+
+</main>
+</body>
+</html>
