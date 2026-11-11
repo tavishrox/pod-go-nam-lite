@@ -474,6 +474,9 @@ Model is stored 0..1: 0.03 = IR slot 4 (shown 0.3).
 2026-11-09: NAM No FX Loop (wah, volume, NAM, cab HD2_Cab4X12CaliV30 @type 2 with @mic, fixed EQ
 HD2_EQ_STATIC_ParametricStereo @type 6 off: 3,886) and NAM No FX Loop or Cab (3,636): the stock layout without
 the loop, block types as stock exports store them. Not yet imported on the unit.
+2026-11-11: NAM FX Loop (volume, wah, NAM, HD2_FXLoopMono1 @type 5 with @trails false, off, FS 1: 3,536 =
+150 + 336 + 2,850 + 200, costs from the firmware tables via podgo/blocks.py list). Block as a stock export stores
+it. Not yet imported on the unit.
 
 ## RAM run from the setup page (2026-11-09, on the unit)
 

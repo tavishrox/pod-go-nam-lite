@@ -161,6 +161,7 @@ Import with POD Go Edit (they overwrite the slot you import into):
 | [NAM Full Board](templates/NAM%20Full%20Board.pgp) | Volume, Deluxe Comp, Minotaur, NAM, Simple EQ, Chorus, Vintage Digital, Hall | 6,725 |
 | [NAM No FX Loop](templates/NAM%20No%20FX%20Loop.pgp) | Stock layout without the FX loop: Wah, Volume, NAM, Cab (4x12 Cali V30), EQ (off); 5 empty blocks | 3,886 |
 | [NAM No FX Loop or Cab](templates/NAM%20No%20FX%20Loop%20or%20Cab.pgp) | Stock layout without the FX loop or cab: Wah, Volume, NAM, EQ (off); 6 empty blocks | 3,636 |
+| [NAM FX Loop](templates/NAM%20FX%20Loop.pgp) | Volume, Wah, NAM, FX Loop (off, footswitch 1); no cab or fixed EQ; 6 empty blocks | 3,536 |
 
 NAM is on IR slot 4 (Model 0.3): set Model to your capture's slot. The expression pedal runs volume, with the
 wah on the toe switch. Use **NAM No FX Loop** for amp-only captures (no cab in the capture), the others

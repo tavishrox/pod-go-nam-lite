@@ -6,7 +6,8 @@
 BASE.pgp: any preset exported by POD Go Edit 2.x (its file layout, device id and app version are kept).
 Most templates leave out the blocks NAM does not need (cab: captures include it; FX loop; fixed EQ), so
 their DSP is free for effects. Two keep the stock layout for captures without a cab: NAM No FX Loop (wah,
-volume, NAM, cab, fixed EQ) and NAM No FX Loop or Cab (wah, volume, NAM, fixed EQ). Every chain was checked on a unit (2026-11-08): it keeps all its blocks
+volume, NAM, cab, fixed EQ) and NAM No FX Loop or Cab (wah, volume, NAM, fixed EQ). NAM FX Loop keeps
+volume, wah, NAM and the FX loop (after NAM, off, on footswitch 1). Every chain was checked on a unit (2026-11-08): it keeps all its blocks
 (the unit drops a chain over 7 effects or about 8,000 cost units). Block settings are POD Go Edit's
 defaults (its Resources/*.models), NAM's as podgo_model.ELEKTRIK_LAYOUT with Model 0.03 (IR slot 4; the unit shows 0.3).
 """
@@ -25,6 +26,7 @@ NAM_VALUES = {"Drive": 0.5, "Bass": 0.5, "Mid": 0.5, "Treble": 0.5, "Presence": 
 STEREO = {"delay.models", "reverb.models", "modulation.models"}     # @type 5 in POD Go Edit's exports
 CAB = "HD2_Cab4X12CaliV30"                   # @type 2 (with @mic), the cab stock presets use most
 FIXED_EQ = "HD2_EQ_STATIC_ParametricStereo"  # @type 6: the fixed EQ block, off as in stock presets
+FX_LOOP = "HD2_FXLoopMono1"                  # @type 5 with @trails, off as in stock presets (cost 200)
 EXP_FS, EXP1, EXP2 = 9, 1, 2
 
 # name: (description, [(model, footswitch index or None, enabled)], cost units on the unit)
@@ -46,6 +48,9 @@ TEMPLATES = {
     "NAM No FX Loop or Cab": ("Stock layout without the FX loop or cab: wah, volume, NAM, EQ; 6 empty blocks", [
         ("HD2_WahFasselStereo", "toe", False), ("HD2_VolPanVolStereo", "exp", True), (NAM, None, True),
         (FIXED_EQ, None, False)], 3636),
+    "NAM FX Loop": ("Volume, wah, NAM, FX loop (off, on footswitch 1); 6 empty blocks", [
+        ("HD2_VolPanVolStereo", "exp", True), ("HD2_WahFasselStereo", "toe", False), (NAM, None, True),
+        (FX_LOOP, 1, False)], 3536),
 }
 LED = {1: 527360, 2: 67840, 3: 16723200, 4: 196619, 5: 67840, 6: 16723200}
 
@@ -63,7 +68,7 @@ def block(models, sid, pos, enabled):
     f, m = models[sid]
     b = {"@model": sid, "@position": pos, "@enabled": enabled, "@no_snapshot_bypass": False,
          "@type": 1 if sid == NAM else 2 if f == "cab.models" else 6 if sid.startswith("HD2_EQ_STATIC_")
-         else (5 if f in STEREO else 0)}
+         else (5 if f in STEREO or sid == FX_LOOP else 0)}
     for p in m["params"]:
         k = p["symbolicID"]
         if k.startswith("@"):
@@ -71,6 +76,8 @@ def block(models, sid, pos, enabled):
                 b[k] = 1
             elif k == "@mic":
                 b[k] = p["default"]
+            elif k == "@trails" and sid == FX_LOOP:
+                b[k] = False
             continue
         b[k] = NAM_VALUES[k] if sid == NAM else p["default"]
     return b, m.get("name", sid)
@@ -122,7 +129,7 @@ def main():
     models = editor_models()
     os.makedirs(sys.argv[2], exist_ok=True)
     for name, (desc, chain, cost) in TEMPLATES.items():
-        assert sum(1 for c in chain if c[0] not in (NAM, CAB, FIXED_EQ)) <= 7 and cost <= 7900, name
+        assert sum(1 for c in chain if c[0] not in (NAM, CAB, FIXED_EQ, FX_LOOP)) <= 7 and cost <= 7900, name
         out = os.path.join(sys.argv[2], name + ".pgp")
         json.dump(make(base, models, name, desc, chain), open(out, "w"), indent=1)
         print(f"wrote {out}: {desc} ({cost} units)")
