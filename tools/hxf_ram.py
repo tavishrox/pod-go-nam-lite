@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """hxf_ram.py - run a built HX Stomp (or HX Stomp XL) .hxf from RAM, writing nothing to the
 eMMC: try the firmware before installing it. A power-cycle brings back what is
-installed. How it works: RAM_RUN.md. The setup page (web/index.html) does the
+installed. How it works: RAM_RUN.md. The setup page (web/pod-go/index.html) does the
 same in the browser, over WebUSB.
 
     # Page Right at power-up (update mode), then:

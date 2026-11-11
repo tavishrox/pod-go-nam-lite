@@ -12,8 +12,7 @@ POD Go's own DSP as an amp block, with your effects either side of it.
 > [Install](POD_GO.md#install) and [Recovery](POD_GO.md#recovery) before you start.
 
 This is a fork of **[hx-stomp-nam-lite](https://github.com/nocaseguy/hx-stomp-nam-lite)** by Derek Bui,
-which does the same for the HX Stomp, HX Stomp XL and HX Effects. The HX instructions are in
-[README_HX_STOMP.md](README_HX_STOMP.md); everything for those units still works as upstream.
+which does the same for the HX Stomp, HX Stomp XL and HX Effects: for those units, use Derek's project.
 
 ---
 

@@ -31,7 +31,6 @@ hx-effects-nam-lite (https://github.com/scottlynn73/hx-effects-nam-lite,
 GPL-3.0-or-later, itself built on this project): the HX Effects' User IR store
 and model-table offsets, and taking over a stock model's identity there.
 
-Photo docs/hx-stomp-xl-amp-nam.jpg: Med Hamza, used with credit.
 
 Neural Amp Modeler (https://github.com/sdatkinson/neural-amp-modeler,
 MIT licence): src/sharc/nam_a2.asm and tools/sharc/nam_multi_kernel.asm are

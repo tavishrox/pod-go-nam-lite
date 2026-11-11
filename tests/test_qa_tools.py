@@ -1,4 +1,4 @@
-"""The on-device QA tools (QA.md) without a unit: the USB handshake against the simulated stock
+"""The on-device QA tools (tools/qa, tools/hx_smoke.py) without a unit: the USB handshake against the simulated stock
 app, the preset blob, the recording scan, and (with a stock .hxf) what hx_smoke reads from an image."""
 import math
 import os

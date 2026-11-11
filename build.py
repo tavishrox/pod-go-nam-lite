@@ -35,8 +35,7 @@ STOCK_MD5 = {
     "329e3a26d60d3de1988b6785fa833ee1": "HX_Stomp_XL",    # HX_Stomp_XL_v3.80.0_0x103966115.hxf (untried on a unit)
     "7c2ebdf1bffb6bcc5f89dda97f91e40c": "HX_Effects",     # HX_Effects_v3.80.0_0xd97239907.hxf (ran on a unit)
 }
-# The kernel and the patch_amp.py steps (tests/test_web_build.py keeps web/firmware-worker.js's copies
-# equal), per unit: the same on both. Each step reads the previous one's output: patch_amp.py CMD IN OUT ARGS...
+# The kernel and the patch_amp.py steps, per unit. Each step reads the previous one's output: patch_amp.py CMD IN OUT ARGS...
 #
 # The earlier four-knob build (NAM4; patch_amp.py add-fx-model --knobs nam4, kernel --no-tone): Model,
 # Polarity, Input, Output in Amp > NAM, on MM4 Frequency Shifter's preset ID 461 (that stock model is removed). HX Edit knows that ID, so it keeps NAM blocks when it

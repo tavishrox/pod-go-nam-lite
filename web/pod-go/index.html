@@ -274,7 +274,7 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
   drop.addEventListener("drop", function (e) { if (e.dataTransfer && e.dataTransfer.files[0]) fromFile(e.dataTransfer.files[0]); });
   $("fwagain").addEventListener("click", function () { done.hidden = true; st.hidden = true; pick.click(); });
 })();
-// Try it from RAM (../ramrun.js, as on the HX Stomp page): the worker plans the run of the last
+// Try it from RAM (../ramrun.js): the worker plans the run of the last
 // build against what is installed, then RAMRUN sends the POD Go's own RAM loader and the plan.
 (function () {
   var $ = function (id) { return document.getElementById(id); };
