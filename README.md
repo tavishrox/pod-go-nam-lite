@@ -10,6 +10,14 @@ POD Go's own DSP as an amp block, with your effects either side of it.
 > **Unofficial and experimental.** Not affiliated with, endorsed by or supported by Line 6 or Yamaha Guitar
 > Group. Installing modified firmware is at your own risk and may void your warranty. Read
 > [Install](POD_GO.md#install) and [Recovery](POD_GO.md#recovery) before you start.
+>
+> **A word from me on risk.** Line 6 have commented on the mods now appearing for the HX Stomp, HX Effects and
+> POD Go, and they seem encouraged that people are experimenting. That doesn't surprise me: the company was
+> built that way. They have also warned against installing third-party firmware, because support will be very
+> limited if something goes wrong. That is absolutely true. If you don't fully understand what you're
+> installing, or you'd be uncomfortable bricking your unit, sleep on it. I talk about who this is for in the
+> video: it's for tinkerers, the kind of folks who hang around on GitHub, the same folks who were modding Tube
+> Screamers in the 80s. Just a heads-up: understand the risks before you start. *ToneShift*
 
 This is a fork of **[hx-stomp-nam-lite](https://github.com/nocaseguy/hx-stomp-nam-lite)** by Derek Bui,
 which does the same for the HX Stomp, HX Stomp XL and HX Effects: for those units, use Derek's project.
