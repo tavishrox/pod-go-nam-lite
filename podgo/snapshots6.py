@@ -81,7 +81,7 @@ STOCK = {SELECT: '2de9f04f', RESET: '2de9f043', CC69_CMP: '032c', SER: '2de9f04f
          **{va: struct.pack('<I', w).hex() for va, (_, w) in APP_PTRS.items()}}
 STOCK_MD5 = 'e0ea3e1ed32f0f353b79f6ad39631838'
 OUT_NAME = 'POD_Go_v2.50.0_Snap6.hxf'                   # six snapshots on stock, nothing else (the page's "only" choice)
-BUILT_MD5 = 'd4fde819f6a64a74e51c0d0f03187975'                                      # that build's .hxf: web/pod-go/firmware-worker.js compares
+BUILT_MD5 = '24cadf327102fae35c12e5133180e715'                                      # that build's .hxf: web/pod-go/firmware-worker.js compares
 
 
 def assemble(stock, debug=True):
@@ -119,8 +119,8 @@ def code_with_images(stock_data):
     code = open(CODE_BIN, 'rb').read()
     syms = json.load(open(CODE_SYMS))
     assert syms['img_recs'] - CAVE_VA == len(code), 'snap6_code.bin and snap6_syms.json disagree'
-    recs, ents, pix, _ = snap6_ui.images(stock_data)
-    return code + recs + ents + pix, syms
+    recs, ents, tiles, pix, _ = snap6_ui.images(stock_data)
+    return code + recs + ents + tiles + pix, syms
 
 
 def thumb_bw(src, dst, link=False):

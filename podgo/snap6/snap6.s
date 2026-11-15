@@ -182,6 +182,54 @@ loaded: ldrb    r9, [r6]                @ the snapshot slot 4 held: store index
         bl      probe
         pop     {r4-r10, pc}
 
+@ Leaving six mode: slot 4 is the four-snapshot view's "4", so snapshot 4's record goes back into it and the
+@ one it held (5 or 6) to the store, without a select. Not when slot 4 is the snapshot playing (its sound must
+@ not change): then the view's 4 shows it until another snapshot is picked, and picking 4 swaps snapshot 4 in
+@ (sel_hook) as in six mode.
+        .thumb_func
+        .type give_back, %function
+give_back:
+        push    {r4-r7, lr}
+        ldr     ip, =GET_MGR + 1
+        blx     ip
+        mov     r4, r0
+        ldr     r6, =state
+        ldrb    r5, [r6]                @ holder
+        cmp     r5, #3
+        bls     9f                      @ snapshot 4 is there
+        ldrb.w  r3, [r4, #LOCKED]
+        cbnz    r3, 9f
+        ldrb.w  r3, [r4, #CUR]
+        cmp     r3, #3
+        beq     9f                      @ slot 4 is playing: leave it
+        ldrb    r3, [r6, #1]            @ snapshot 4 kept in the store?
+        cbz     r3, 9f
+        adds    r0, r4, #4
+        ldr     ip, =LOCK + 1
+        blx     ip
+        addw    r7, r4, #SLOT4
+        subs    r3, r5, #3
+        adds    r2, r6, r3
+        movs    r1, #1
+        strb    r1, [r2, #1]            @ valid[holder - 3]
+        movw    r2, #RECSZ
+        ldr     r0, =store
+        mla     r0, r2, r3, r0
+        mov     r1, r7
+        ldr     ip, =MEMCPY + 1
+        blx     ip                      @ slot 4 -> store[holder - 3]
+        mov     r0, r7
+        ldr     r1, =store
+        movw    r2, #RECSZ
+        ldr     ip, =MEMCPY + 1
+        blx     ip                      @ store[0] (snapshot 4) -> slot 4
+        movs    r3, #3
+        strb    r3, [r6]                @ holder: snapshot 4
+        adds    r0, r4, #4
+        ldr     ip, =UNLOCK + 1
+        blx     ip
+9:      pop     {r4-r7, pc}
+
 @ DEBUG probe: dbg[r0..r0+7] = byte PROBE_B of records 1-4, store 0-2, then CUR. r1 = manager. Clobbers r0-r3, ip.
         .equ PROBE_B, 6
         .thumb_func
@@ -720,7 +768,13 @@ mirror: orr     ip, ip, #1
         .equ IDX_STATE,   0x2828a12c
         .equ OPEN_BODY,   0x28c7d60c
         .equ IMG_ID0,     546
-        .equ NIMG,        16
+        .equ NIMG,        24
+        .equ SYNTH,       0x40000000     @ an Entry 8 offset of a tile drawn here (snap6_ui.py), image k in bits 20..25
+        .equ MARK,        0x0001         @ a badge pixel that takes the tile's background colour
+        .equ TD,          0              @ tiles.bin: tile descriptions {u16 W, u8 snapshot, u8 sel, u8 badge, u8 dx, u8 dy, 0}
+        .equ TINT,        8 * NIMG       @ {idle, active} RGB565 per LED colour 0..11
+        .equ BHEAD,       TINT + 48      @ badges {u8 w, u8 h, u16 0, u32 offset}
+        .equ BPIX,        BHEAD + 144    @ 18 badges: 1-6 idle (white), 1-6 selected, 1-6 idle as stock (Auto)
         .equ REFRESH,     0x28c5e938     @ called after the screen is redrawn (as 0x28cacc9c does)
         .equ SNAP_LEDS,   0x28cac230     @ snapshot-mode LEDs
         .equ GET_COLOR,   0x28cb8894     @ (mgr, idx): record + 0x27c, the snapshot's colour
@@ -806,7 +860,9 @@ fs_hook:
         ldrb    r0, [r8]
         eor     r0, r0, #1
         strb    r0, [r8]
-        bl      six_apply
+        cbnz    r0, 3f
+        bl      give_back               @ back to four: snapshot 4 into slot 4
+3:      bl      six_apply
         ldr     ip, =UI_OBJ + 1
         blx     ip
         ldr     ip, =UI_DRAW + 1
@@ -886,7 +942,26 @@ draw_hook:
         blx     ip
 4:      adds    r6, #16
         b       2b
-3:      pop     {r0-r6, lr}
+3:      cbnz    r5, 9f                  @ four snapshots: the coloured tiles (images 16-19, selected 20-23)
+        ldr     r0, =sh_snap            @ tile -> snapshot (stock {-, 2, 3, -, 0, 1})
+        ldr     r1, =sh_img             @ per tile
+        movs    r2, #0
+7:      ldrb    r3, [r0, r2]
+        cmp     r3, #4
+        bhs     8f
+        addw    r3, r3, #IMG_ID0 + 16
+        str     r3, [r1, r2, lsl #2]
+8:      adds    r2, #1
+        cmp     r2, #6
+        blo     7b
+        ldr     r1, =sh_sel             @ per snapshot
+        movs    r2, #0
+7:      addw    r3, r2, #IMG_ID0 + 20
+        str     r3, [r1, r2, lsl #2]
+        adds    r2, #1
+        cmp     r2, #4
+        blo     7b
+9:      pop     {r0-r6, lr}
         push.w  {r4-r11, lr}            @ the stock first instruction
         ldr.w   pc, =DRAW_BODY + 1
 
@@ -1076,10 +1151,12 @@ open_hook:
 @ a file over img_pix: read(file, buf, n), write, seek(file, offset, whence), flush
         .thumb_func
 ff_read:
-        push    {r4, lr}
+        push    {r4-r11, lr}
         ldr     r3, [r0, #4]
         add     r4, r3, r2
         str     r4, [r0, #4]
+        tst     r3, #SYNTH
+        bne     ff_tile
         mov     r4, r2
         mov     r0, r1
         ldr     r1, =img_pix
@@ -1087,7 +1164,74 @@ ff_read:
         ldr     ip, =MEMCPY + 1
         blx     ip
         mov     r0, r4
-        pop     {r4, pc}
+        pop     {r4-r11, pc}
+@ a snapshot tile, drawn as it is read: the badge where it sits, the snapshot's LED colour (snap6_ui.colours)
+@ everywhere else. Pixels are RGB565 little-endian, rows mirrored left-right, as Entry 8 keeps them.
+ff_tile:
+        mov     r10, r2                 @ n (returned)
+        mov     r4, r1                  @ out
+        ubfx    r5, r3, #20, #6         @ k
+        bfc     r3, #20, #12
+        mov     r6, r3                  @ offset in the image
+        ldr     r7, =img_tiles
+        add     r7, r7, r5, lsl #3      @ its description
+        ldrh    r8, [r7]                @ W
+        ldrb    r11, [r7, #2]           @ snapshot 0..5
+        ldr     ip, =GET_MGR + 1
+        blx     ip
+        mov     r1, r11
+        bl      vcolor                  @ its LED colour (as the LEDs get it; 5 and 6 from the store)
+        cmp     r0, #12
+        it      hs
+        movhs   r0, #0
+        ldrb    r9, [r7, #3]            @ selected
+        ldr     r1, =img_tiles + TINT
+        add     r1, r1, r0, lsl #2
+        add     r1, r1, r9, lsl #1
+        ldrh    r11, [r1]               @ background
+        ldrb    r1, [r7, #4]            @ badge
+        orrs    r0, r0, r9
+        it      eq
+        addeq   r1, #12                 @ Auto and idle: the stock grey badge
+        mov     r0, r1
+        ldr     r1, =img_tiles + BHEAD
+        add     r1, r1, r0, lsl #3
+        ldrb    r2, [r1]                @ badge w
+        ldrb    r3, [r1, #1]            @ badge h
+        ldr     r0, [r1, #4]
+        ldr     r1, =img_tiles + BPIX
+        add     r9, r1, r0              @ badge pixels
+        ldrb    r5, [r7, #5]            @ badge x
+        ldrb    r7, [r7, #6]            @ badge y
+        mov     lr, r10
+1:      cmp     lr, #0
+        beq     3f
+        lsr     r0, r6, #1              @ pixel
+        udiv    r1, r0, r8              @ row
+        mls     r0, r1, r8, r0
+        sub     r0, r8, r0
+        subs    r0, #1                  @ column (mirrored)
+        subs    r0, r0, r5
+        subs    r1, r1, r7
+        mov     ip, r11
+        cmp     r0, r2
+        bhs     2f
+        cmp     r1, r3
+        bhs     2f
+        mla     r0, r1, r2, r0
+        ldrh    r0, [r9, r0, lsl #1]
+        cmp     r0, #MARK
+        it      ne
+        movne   ip, r0
+2:      tst     r6, #1
+        it      ne
+        lsrne   ip, ip, #8
+        strb    ip, [r4], #1
+        adds    r6, #1
+        subs    lr, #1
+        b       1b
+3:      mov     r0, r10
+        pop     {r4-r11, pc}
         .thumb_func
 ff_seek:
         cmp     r2, #0
@@ -1168,4 +1312,5 @@ shadow: .space  MGRSZ                   @ a manager for mirroring onto the store
         .align  2
 img_recs: .incbin "recs.bin"
 img_ents: .incbin "ents.bin"
+img_tiles: .incbin "tiles.bin"
 img_pix:  .incbin "pix.bin"

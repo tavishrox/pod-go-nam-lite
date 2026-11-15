@@ -253,3 +253,27 @@ Left: (d) POD Go Edit with the --no-debug build; a final memory check before any
 | Backup / restore | not tested (owner skipped; a restore in a RAM run would overflow the 2 MB write pool) |
 
 So: to copy or move a preset that uses 5 and 6, save it to the new slot on the unit itself.
+
+## Coloured snapshot tiles (2026-11-15, RAM, on the unit)
+
+- Stomp mode's block tiles are flat images, one per LED colour: `Play_<Colour>` and `Play_<Colour>Off` (153x64;
+  Red 0xf800, DarkOrange 0xeac4, LightOrange 0xfd67, Yellow 0xffe0, Green 0x07e0, Turquoise 0x17ff, Blue 0x2cbb,
+  Violet 0xaa5b, Pink 0xe992, Gray 0xb5b6). The table at 0x28cde52c maps block categories to them (Distortion
+  Play_Yellow, Delay Play_Green, Reverb Play_DarkOrange, ...). The colour names (Auto, White, Red, Drk Orng,
+  Lt Orng, Yellow, Green, Turq, Blue, Violet, Pink, Off) are at 0x280112d4 (Entry 0 segment 5, 16-byte stride),
+  in the order of a snapshot's colour byte (record +0x27c, preset key 12 per snapshot).
+- The screen fetches tile images through the hooks already in place (rec/idx/open); a tile image k is now marked
+  `0x40000000 | k << 20` in its Entry 8 offset and `ff_read` draws it as it is read (`ff_tile`): background = the
+  colour table entry for the snapshot's LED colour (`vcolor`, as the LEDs get it; 5 and 6 from the store), the
+  badge where it sits (MARK pixels take the background). No caching problem seen: a colour change shows when the
+  play screen is next drawn.
+- Look (owner's choice after a mock-up and a first try): as stomp mode, the full tile colour when idle with the
+  camera and number white, lighter (45% towards white; green toned down first) when active with the stock black
+  camera and the screen's dark text; Auto exactly stock; White mid grey / white; Off near black / grey.
+- Four-snapshot view: draw_hook points its four snapshot tiles at images 16-19 (174 px) and the selected ones at
+  20-23, so it is coloured too.
+- Leaving six mode (MODE hold) now gives slot 4 back to snapshot 4 (`give_back`: slot 4 to the store, snapshot 4's
+  record in, no select) unless slot 4 is the snapshot playing; before, the four view's 4 showed (and named) 5 or 6
+  until 4 was picked.
+- Emulator: all 20 tile images x 6 colours read through idx/open/ff_read in odd chunk sizes match
+  `snap6_ui.draw`; the 55 checks pass (3 updated: tiles are drawn, four view uses images 562-569).
