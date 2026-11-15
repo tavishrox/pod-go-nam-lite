@@ -95,7 +95,7 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
   <div class="warn">
     <p><b>Unofficial and experimental.</b> Not made or supported by Line 6 or Yamaha Guitar Group. Installing
       modified firmware is at your own risk and may void your warranty. Back up first (step 1). If anything goes
-      wrong, step 9 always brings back the normal firmware: the mod never touches the POD Go's bootloader.</p>
+      wrong, step 10 always brings back the normal firmware: the mod never touches the POD Go's bootloader.</p>
     <p><b>A word from me on risk.</b> Line 6 have commented on the mods now appearing for the HX Stomp, HX Effects and POD Go, and they seem encouraged that people are experimenting. That doesn't surprise me: the company was built that way. They have also warned against installing third-party firmware, because support will be very limited if something goes wrong. That is absolutely true. If you don't fully understand what you're installing, or you'd be uncomfortable bricking your unit, sleep on it. I talk about who this is for in the video: it's for tinkerers, the kind of folks who hang around on GitHub, the same folks who were modding Tube Screamers in the 80s. Just a heads-up: understand the risks before you start. <i>ToneShift</i></p>
   </div>
 </header>
@@ -112,6 +112,7 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
     <li><a href="#convert">Convert your captures</a></li>
     <li><a href="#import">Put a capture on the POD Go</a></li>
     <li><a href="#play">Set up a preset and play</a></li>
+    <li><a href="#six">Six snapshots (optional)</a></li>
     <li><a href="#recover">Going back to normal (recovery)</a></li>
     <li><a href="#help">Getting help</a></li>
     <li><a href="#links">All the links</a></li>
@@ -145,6 +146,8 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
     <li><div><p><b>Quit POD Go Edit</b> (<kbd>⌘ Q</kbd> on a Mac, close the window on Windows). It holds the USB
       connection, and the next steps need it free.</p></div></li>
   </ol>
+  <div class="note"><p><b>Using six snapshots later?</b> POD Go Edit's backups keep four snapshots per preset, so
+    they won't hold snapshots 5 and 6 (step 9). Your presets on the unit keep them through an update.</p></div>
 </section>
 
 <section id="stock">
@@ -170,10 +173,13 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
     <li><div><p>In Chrome, open the setup page: <a href="https://tavishrox.github.io/pod-go-nam-lite/">tavishrox.github.io/pod-go-nam-lite</a>.</p></div></li>
     <li><div><p>Scroll down to <b class="ui">Setting it up</b>, step 2, <b class="ui">Build the NAM firmware</b>.</p></div></li>
     <li><div>
-      <p>Choose your options (both are optional; leave them unticked for the plain build):</p>
+      <p>At the top, <b class="ui">NAM A2 Lite</b> is chosen. (<b class="ui">Six snapshots only</b> builds stock 2.50 with
+        six snapshots and nothing else: no NAM. Choose it if that's all you want; the options below then hide.)</p>
+      <p>Choose your options (all optional; leave them unticked for the plain build):</p>
       <ul>
         <li><b class="ui">ToneShift Edition</b>: adds the "NAM A2 Edition" lettering to the POD Go's boot screen.</li>
         <li><b class="ui">Show capture names on the Model knob</b> (experimental): the Model knob shows, say, "4 Mesa JP2C" instead of 0.3.</li>
+        <li><b class="ui">Six snapshots</b> (experimental): hold MODE for snapshots 1 to 6 on the footswitches, with coloured tiles (step 9).</li>
       </ul>
     </div></li>
     <li><div><p>Drag <code>POD_Go_v2.50.0_0x6e984472.hxf</code> from your Downloads folder onto the box that says
@@ -197,7 +203,7 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
         capture, not firmware.</span> Wrong file: captures go in the converter (step 6).</li>
       <li><span class="bad">Open this page from its web address to build.</span> You opened a saved copy of the page.
         Use the link above.</li>
-      <li><span class="bad">The build stopped.</span> Reload the page and try again; if it happens twice, see step 10.</li>
+      <li><span class="bad">The build stopped.</span> Reload the page and try again; if it happens twice, see step 11.</li>
     </ul>
   </div>
 </section>
@@ -239,7 +245,7 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
     <li><div><p>Open <b>Line 6 Updater</b>. Sign in with your Line 6 account if it asks.</p></div></li>
     <li><div><p>Under <b class="ui">Select device to update</b>, click your <b>POD Go</b>.</p></div></li>
     <li><div><p>Click <b class="ui">Local file</b>, then <b class="ui">Choose File</b>, and pick the file you downloaded in
-      step 3: the one whose name starts <code>POD_Go_v2.50.0_NAM_A2_Lite</code> (not the stock file).</p></div></li>
+      step 3: the one whose name starts <code>POD_Go_v2.50.0_NAM_A2_Lite</code> (or <code>POD_Go_v2.50.0_Snap6</code> for six snapshots only), not the stock file.</p></div></li>
     <li><div><p>Click <b class="ui">Update</b>. Read Line 6's notes and click <b class="ui">Continue</b> or
       <b class="ui">OK</b> when asked.</p></div></li>
     <li><div>
@@ -321,8 +327,37 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
   </table></div>
 </section>
 
+<section id="six">
+  <h2><span class="n">9</span> Six snapshots (optional)</h2>
+  <p>Only if you ticked <b class="ui">Six snapshots</b> (or chose <b class="ui">Six snapshots only</b>) in step 3.</p>
+  <ol class="steps">
+    <li><div><p>Set the footswitches to snapshot mode as usual, then <b>hold <kbd>MODE</kbd></b> (top right). The screen
+      shows six tiles: <b>bottom row 1 2 3, top row 4 5 6</b>. Bank Up and Bank Down become snapshots 4 and 1.</p></div></li>
+    <li><div><p>Press a footswitch to pick its snapshot. Set up snapshots 5 and 6 like any other, and
+      <b>save while on each snapshot you change</b>, as with the stock four.</p></div></li>
+    <li><div><p><b>Hold <kbd>MODE</kbd> again</b> for the normal footswitches and banks. Snapshots 5 and 6 stay in the
+      preset; with six snapshots off you reach them only by MIDI (CC69 values 4 and 5).</p></div></li>
+  </ol>
+  <h3>Coloured tiles</h3>
+  <p>Each snapshot's tile takes the snapshot's LED colour, exactly as stomp mode shows a block of that colour: the deeper
+    shade with white text when idle, the full colour with dark text when it's the snapshot playing. This works with four
+    or six snapshots. Snapshots left on <b>Auto</b> look as they always did. Set a snapshot's colour on the POD Go as usual.</p>
+  <h3>POD Go Edit and snapshots 5 and 6</h3>
+  <p>POD Go Edit only knows four snapshots. It still connects, edits and saves normally, and saving keeps 5 and 6 because
+    the POD Go writes them. Anything that sends a whole preset from the computer replaces them:</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>What you do</th><th>Snapshots 5 and 6</th></tr></thead>
+    <tr><td>Save on the POD Go, or save from POD Go Edit</td><td>kept</td></tr>
+    <tr><td>Save to another preset slot on the POD Go</td><td>kept</td></tr>
+    <tr><td>Copy and paste or drag in POD Go Edit's preset list</td><td>lost</td></tr>
+    <tr><td>Export and import a <code>.pgp</code> file</td><td>lost</td></tr>
+    <tr><td>Restore a POD Go Edit backup</td><td>lost (not tested; expect it)</td></tr>
+  </table></div>
+  <p>To copy or move a preset that uses 5 and 6, save it to the new slot <b>on the POD Go itself</b>.</p>
+</section>
+
 <section id="recover">
-  <h2><span class="n">9</span> Going back to normal (recovery)</h2>
+  <h2><span class="n">10</span> Going back to normal (recovery)</h2>
   <p>Use this if the POD Go stops at the boot screen, an update fails, or you simply want the stock firmware back.</p>
   <ol class="steps">
     <li><div><p>Turn the POD Go off.</p></div></li>
@@ -338,7 +373,7 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
 </section>
 
 <section id="help">
-  <h2><span class="n">10</span> Getting help</h2>
+  <h2><span class="n">11</span> Getting help</h2>
   <p>Open an issue on GitHub so others can find the answer too:
     <a href="https://github.com/tavishrox/pod-go-nam-lite/issues/new/choose">github.com/tavishrox/pod-go-nam-lite/issues</a>.
     Say whether you have a POD Go or POD Go Wireless, what you did and what happened (a photo of the screen helps).
@@ -346,7 +381,7 @@ footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; border-t
 </section>
 
 <section id="links">
-  <h2><span class="n">11</span> All the links</h2>
+  <h2><span class="n">12</span> All the links</h2>
   <div class="tablewrap"><table class="links">
     <tr><td>Setup page</td><td><a href="https://tavishrox.github.io/pod-go-nam-lite/">https://tavishrox.github.io/pod-go-nam-lite/</a></td></tr>
     <tr><td>Converter</td><td><a href="https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/converter.html">https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/converter.html</a></td></tr>

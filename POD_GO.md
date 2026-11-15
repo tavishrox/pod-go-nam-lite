@@ -292,6 +292,7 @@ It checks your file's MD5, builds the NAM code and runs it in a SHARC simulator 
 | Presets | All 128 user presets selected in turn, NAM loaded after each: its output never moved (largest change 3×10⁻¹⁰) |
 | DSP | NAM measured at 28.3% (median) of the 393.2 MHz DSP; heaviest admitted preset plays clean |
 | Install | Installed with Line 6 Updater; presets intact, NAM loads and plays |
+| Six snapshots | Installed: six-snapshot screen, LEDs, switches, MIDI, save and reload, power-cycle; POD Go Edit opens and saves. Coloured tiles and the return of snapshot 4 from RAM |
 
 ## HX Effects
 
