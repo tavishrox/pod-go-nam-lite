@@ -1,0 +1,406 @@
+// podgo-usb.js - talk to a running POD Go over WebUSB the way POD Go Edit does (the companion page).
+// A port of tools/hx_ctl.py and tools/hx_dfu_reboot.py's Stream: keep the three in step.
+//
+//   var pg = await PODGOUSB.connect(navigator.usb, { log })   // asks the browser for the POD Go
+//   await pg.current()          -> { setlist, preset, name }
+//   await pg.presetList(setlist)-> [{ index, name }]
+//   await pg.select(preset)     (loads it on the unit: unsaved edits there are lost)
+//   await pg.readPreset(true)   -> Uint8Array l6-helix blob; true asks for snapshots 5 and 6 (key 14) too
+//   await pg.writeEditBuffer(blob)   (the unit's edit buffer only: nothing saved)
+//   await pg.close()
+//
+// Wire format (hx_dfu_reboot.py's notes): one message per OUT transfer, padded to 4 bytes; transport header
+// w0 = type<<28 | 2<<26 | len, w1 = src | dst<<16 (type 2 = SYN with an extra word mtu<<16); stream header
+// w0 = flags<<24 | seq<<8, w1 = the receive-window edge (0x1000 + bytes consumed). Streams: editor 0x1000 <->
+// 0x3ED (service 6), librarian 0x1001 <-> 0x3EF (2), notify 0x1002 <-> 0x3F0 (4). Each selects its service with
+// {u16 1, u16 svc, u32 1, u8 svc}; requests are {u16 1, u16 svc, u32 len} + MessagePack {0x66 seq, 0x64 cmd,
+// 0x65 params}, replies {u16 0, u16 svc, u32 len} + {0x66 seq, 0x67 status, 0x68 result}.
+(function (root) {
+  "use strict";
+
+  var DEVICE = { vendorId: 0x0E41, productId: 0x424B };
+  var RX_BUF = 0x1000, HB_MS = 1000;
+  var F_SYN = 0x01, F_FIN = 0x02, F_DATA = 0x04, F_WIN = 0x08, F_HB = 0x10, F_HBREQ = 0x20;
+  var EDITOR = { local: 0x1000, remote: 0x03ED, svc: 6 },
+      LIBRARIAN = { local: 0x1001, remote: 0x03EF, svc: 2 },
+      NOTIFY = { local: 0x1002, remote: 0x03F0, svc: 4 };
+  var K = { SEQ: 0x66, CMD: 0x64, PARAMS: 0x65, STATUS: 0x67, RESULT: 0x68, ERR: 0x6F,
+            SETLIST: 0x6B, PRESET: 0x6C, NAME: 0x6D, PBLOB: 0x6E };
+  var CMD = { LOAD: 0x14, SET_EDITBUF: 0x15, GET_EDITBUF: 0x16, CURRENT: 0x17, LIB_LIST: 0x01 };
+  var APP = { 0x7a: 1 };   // the six-snapshot firmware's marker: the read carries key 14 (snapshots 5 and 6)
+
+  function fail(text, code) { var e = new Error(text); e.code = code || "usb"; return e; }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function concat(parts) {
+    var n = 0; parts.forEach(function (p) { n += p.length; });
+    var out = new Uint8Array(n), o = 0;
+    parts.forEach(function (p) { out.set(p, o); o += p.length; });
+    return out;
+  }
+  function u32s(list) {
+    var b = new Uint8Array(4 * list.length), v = new DataView(b.buffer);
+    list.forEach(function (w, i) { v.setUint32(4 * i, w >>> 0, true); });
+    return b;
+  }
+  function pad4(b) { return b.length % 4 ? concat([b, new Uint8Array(4 - b.length % 4)]) : b; }
+  function text(b) { var s = ""; for (var i = 0; i < b.length && b[i]; i++) s += String.fromCharCode(b[i]); return s; }
+
+  // ---- MessagePack (what the unit sends and accepts; strings and buffers decode as Uint8Array)
+  var MP = {
+    encode: function (v) { var out = []; enc(v, out); return concat(out); },
+    decode: function (b) { var r = dec(b, 0); return r[0]; },
+    decodeAt: dec
+  };
+  function enc(v, out) {
+    if (v === null || v === undefined) { out.push(Uint8Array.of(0xc0)); return; }
+    if (v === true || v === false) { out.push(Uint8Array.of(v ? 0xc3 : 0xc2)); return; }
+    if (typeof v === "number") {
+      if (Number.isInteger(v)) {
+        if (v >= 0 && v < 128) out.push(Uint8Array.of(v));
+        else if (v < 0 && v >= -32) out.push(Uint8Array.of(v & 0xff));
+        else if (v >= 0 && v < 256) out.push(Uint8Array.of(0xcc, v));
+        else if (v >= 0 && v < 65536) out.push(Uint8Array.of(0xcd, v >> 8, v & 0xff));
+        else if (v >= 0 && v < 4294967296) { var b = new Uint8Array(5); b[0] = 0xce; new DataView(b.buffer).setUint32(1, v); out.push(b); }
+        else if (v >= -128 && v < 0) out.push(Uint8Array.of(0xd0, v & 0xff));
+        else if (v >= -32768 && v < 0) { var c = new Uint8Array(3); c[0] = 0xd1; new DataView(c.buffer).setInt16(1, v); out.push(c); }
+        else { var d = new Uint8Array(5); d[0] = 0xd2; new DataView(d.buffer).setInt32(1, v); out.push(d); }
+      } else { var f = new Uint8Array(5); f[0] = 0xca; new DataView(f.buffer).setFloat32(1, v); out.push(f); }
+      return;
+    }
+    if (v instanceof Uint8Array) {      // as POD Go Edit packs buffers: MessagePack str
+      var n = v.length;
+      if (n < 32) out.push(Uint8Array.of(0xa0 | n));
+      else if (n < 256) out.push(Uint8Array.of(0xd9, n));
+      else if (n < 65536) out.push(Uint8Array.of(0xda, n >> 8, n & 0xff));
+      else { var h = new Uint8Array(5); h[0] = 0xdb; new DataView(h.buffer).setUint32(1, n); out.push(h); }
+      out.push(v); return;
+    }
+    if (typeof v === "string") { enc(new TextEncoder().encode(v), out); return; }
+    if (Array.isArray(v)) {
+      var m = v.length;
+      out.push(m < 16 ? Uint8Array.of(0x90 | m) : Uint8Array.of(0xdc, m >> 8, m & 0xff));
+      v.forEach(function (x) { enc(x, out); }); return;
+    }
+    if (v instanceof Map) {
+      out.push(v.size < 16 ? Uint8Array.of(0x80 | v.size) : Uint8Array.of(0xde, v.size >> 8, v.size & 0xff));
+      v.forEach(function (x, k) { enc(k, out); enc(x, out); }); return;
+    }
+    var keys = Object.keys(v);
+    out.push(keys.length < 16 ? Uint8Array.of(0x80 | keys.length) : Uint8Array.of(0xde, keys.length >> 8, keys.length & 0xff));
+    keys.forEach(function (k) { enc(/^-?\d+$/.test(k) ? Number(k) : k, out); enc(v[k], out); });
+  }
+  function dec(b, p) {
+    var t = b[p], dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    if (t === undefined) throw fail("MessagePack: truncated");
+    if (t < 0x80) return [t, p + 1];
+    if (t >= 0xe0) return [t - 256, p + 1];
+    if ((t & 0xf0) === 0x80) return map(t & 15, p + 1);
+    if ((t & 0xf0) === 0x90) return arr(t & 15, p + 1);
+    if ((t & 0xe0) === 0xa0) return raw(t & 31, p + 1);
+    switch (t) {
+      case 0xc0: return [null, p + 1];
+      case 0xc2: return [false, p + 1];
+      case 0xc3: return [true, p + 1];
+      case 0xc4: case 0xd9: return raw(b[p + 1], p + 2);
+      case 0xc5: case 0xda: return raw(dv.getUint16(p + 1), p + 3);
+      case 0xc6: case 0xdb: return raw(dv.getUint32(p + 1), p + 5);
+      case 0xca: return [dv.getFloat32(p + 1), p + 5];
+      case 0xcb: return [dv.getFloat64(p + 1), p + 9];
+      case 0xcc: return [b[p + 1], p + 2];
+      case 0xcd: return [dv.getUint16(p + 1), p + 3];
+      case 0xce: return [dv.getUint32(p + 1), p + 5];
+      case 0xcf: return [Number(dv.getBigUint64(p + 1)), p + 9];
+      case 0xd0: return [dv.getInt8(p + 1), p + 2];
+      case 0xd1: return [dv.getInt16(p + 1), p + 3];
+      case 0xd2: return [dv.getInt32(p + 1), p + 5];
+      case 0xd3: return [Number(dv.getBigInt64(p + 1)), p + 9];
+      case 0xdc: return arr(dv.getUint16(p + 1), p + 3);
+      case 0xdd: return arr(dv.getUint32(p + 1), p + 5);
+      case 0xde: return map(dv.getUint16(p + 1), p + 3);
+      case 0xdf: return map(dv.getUint32(p + 1), p + 5);
+    }
+    throw fail("MessagePack: type 0x" + t.toString(16) + " at " + p);
+    function raw(n, q) { if (q + n > b.length) throw fail("MessagePack: truncated"); return [b.slice(q, q + n), q + n]; }
+    function arr(n, q) { var a = []; for (var i = 0; i < n; i++) { var r = dec(b, q); a.push(r[0]); q = r[1]; } return [a, q]; }
+    function map(n, q) { var m = new Map(); for (var i = 0; i < n; i++) { var k = dec(b, q), v = dec(b, k[1]); m.set(k[0], v[0]); q = v[1]; } return [m, q]; }
+  }
+
+  // ---- the USB link: one IN reader, messages routed to their stream
+  function Link(dev, epOut, epIn, mtu, log) {
+    this.dev = dev; this.epOut = epOut; this.epIn = epIn; this.mtu = mtu; this.log = log || function () {};
+    this.streams = []; this.closed = false; this.error = null;
+  }
+  Link.prototype.start = function () {
+    var self = this;
+    (function next() {
+      if (self.closed) return;
+      self.dev.transferIn(self.epIn, self.mtu).then(function (r) {
+        if (r.data && r.data.byteLength) self.route(new Uint8Array(r.data.buffer, r.data.byteOffset, r.data.byteLength).slice());
+        next();
+      }, function (e) { if (!self.closed) { self.error = fail("The POD Go stopped answering (" + e.message + ")."); self.wake(); } });
+    })();
+    this.hb = setInterval(function () {
+      var now = Date.now();
+      self.streams.forEach(function (s) {
+        if (s.rxSeq !== null && now - s.lastTx >= HB_MS) s.send(F_HB).catch(function () {});
+      });
+    }, 250);
+  };
+  Link.prototype.route = function (buf) {
+    var off = 0, v = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+    while (off + 8 <= buf.length) {
+      var w0 = v.getUint32(off, true), w1 = v.getUint32(off + 4, true), type = w0 >>> 28, len = w0 & 0xFFFF;
+      if (off + 8 + len > buf.length) { this.log("truncated message from the unit"); return; }
+      var m = { type: type, src: w1 & 0xFFFF, dst: w1 >>> 16, flags: null }, p = off + 8;
+      if (type === 2) { m.mtu = v.getUint32(p, true) >>> 16; p += 4; }
+      if (off + 8 + len - p >= 8) {
+        var s0 = v.getUint32(p, true);
+        m.flags = s0 >>> 24; m.seq = (s0 >>> 8) & 0xFF; m.window = v.getUint32(p + 4, true);
+        m.data = buf.slice(p + 8, off + 8 + len);
+      }
+      for (var i = 0; i < this.streams.length; i++) {
+        var s = this.streams[i];
+        if (m.flags !== null && (m.src & 0xFF) === (s.remote & 0xFF) && m.dst === s.local) { s.handle(m); break; }
+      }
+      off += (8 + len + 3) & ~3;
+    }
+    this.wake();
+  };
+  Link.prototype.wake = function () { this.streams.forEach(function (s) { if (s.waiter) { var w = s.waiter; s.waiter = null; w(); } }); };
+  Link.prototype.write = function (b) { return this.dev.transferOut(this.epOut, b); };
+  Link.prototype.close = async function () {
+    clearInterval(this.hb);
+    this.closed = true;
+    try { await this.dev.releaseInterface(0); } catch (e) { /* gone */ }
+    try { await this.dev.close(); } catch (e) { /* gone */ }
+  };
+
+  // ---- a stream (hx_dfu_reboot.Stream)
+  function Stream(link, local, remote) {
+    this.link = link; this.local = local; this.remote = remote;
+    this.txSeq = 1; this.rxSeq = null; this.consumed = 0; this.sent = 0; this.peerWindow = 0; this.peerMtu = 0;
+    this.rx = new Uint8Array(0); this.waiter = null; this.lastTx = Date.now(); this.error = null;
+    link.streams.push(this);
+  }
+  Stream.prototype.handle = function (m) {
+    var f = m.flags;
+    if (f & F_SYN) {
+      if (this.rxSeq !== null) { this.error = fail("unexpected SYN from the unit"); return; }
+      this.rxSeq = m.seq; this.peerMtu = m.mtu || 0; this.peerWindow = m.window; return;
+    }
+    if (this.rxSeq === null) { this.error = fail("the unit sent data before connecting"); return; }
+    if (((m.seq - this.rxSeq) & 0xFF) !== 1) { this.error = fail("sequence gap from the unit"); return; }
+    this.rxSeq = m.seq;
+    if (f & (F_DATA | F_WIN)) {
+      this.peerWindow = m.window;
+      if (f & F_DATA && m.data.length) this.rx = concat([this.rx, m.data]);
+    }
+    if (f & F_FIN) this.error = fail("the unit closed the connection");
+  };
+  Stream.prototype.send = function (flags, data) {
+    data = data || new Uint8Array(0);
+    var sh = u32s([(flags << 24) | (this.txSeq << 8), RX_BUF + this.consumed]), body, type;
+    if (flags & F_SYN) { body = concat([u32s([(this.link.mtu & 0xFFFF) << 16]), sh, data]); type = 2; }
+    else { body = concat([sh, data]); type = 1; }
+    var msg = pad4(concat([u32s([(type << 28) | (2 << 26) | body.length, this.local | ((this.remote & 0x3FF) << 16)]), body]));
+    this.txSeq = (this.txSeq + 1) & 0xFF;
+    this.sent += data.length;
+    this.lastTx = Date.now();
+    return this.link.write(msg);
+  };
+  Stream.prototype.wait = function (ms) {
+    var self = this;
+    return new Promise(function (resolve) {
+      var t = setTimeout(function () { self.waiter = null; resolve(); }, ms);
+      self.waiter = function () { clearTimeout(t); resolve(); };
+    });
+  };
+  Stream.prototype.check = function () {
+    if (this.error) throw this.error;
+    if (this.link.error) throw this.link.error;
+  };
+  Stream.prototype.connect = async function (ms) {
+    await this.send(F_SYN | F_HBREQ);
+    var end = Date.now() + ms;
+    while (this.rxSeq === null) {
+      this.check();
+      if (Date.now() > end) throw fail("The POD Go didn't answer. Quit POD Go Edit and try again.", "busy");
+      await this.wait(100);
+    }
+  };
+  Stream.prototype.write = async function (data, ms) {
+    var end = Date.now() + ms;
+    while (this.sent + data.length > this.peerWindow) {
+      this.check();
+      if (Date.now() > end) throw fail("the unit's receive window stayed closed");
+      await this.wait(100);
+    }
+    await this.send(F_DATA, data);
+  };
+  Stream.prototype.read = async function (n, ms) {
+    var end = Date.now() + ms;
+    while (this.rx.length < n) {
+      this.check();
+      if (Date.now() > end) throw fail("timed out waiting for the POD Go");
+      await this.wait(100);
+    }
+    var out = this.rx.slice(0, n);
+    this.rx = this.rx.slice(n);
+    this.consumed += n;
+    return out;
+  };
+  Stream.prototype.windowUpdate = function () { return this.send(F_WIN); };
+  Stream.prototype.fin = function () { return this.send(F_FIN).catch(function () {}); };
+
+  // ---- a service channel (hx_ctl.Channel)
+  function Channel(link, cfg) { this.st = new Stream(link, cfg.local, cfg.remote); this.svc = cfg.svc; this.seq = 0; }
+  Channel.prototype.open = async function (ms) {
+    await this.st.connect(ms);
+    await this.writeMsg(Uint8Array.of(1, 0, this.svc, 0, 1, 0, 0, 0, this.svc), ms);
+    var r = await this.readMsg(ms);
+    if (r.body.length !== 1 || r.body[0] !== this.svc) throw fail("service " + this.svc + ": unexpected reply");
+  };
+  Channel.prototype.writeMsg = async function (data, ms) {
+    var mx = (this.st.peerMtu || 512) - 16;
+    for (var i = 0; i < data.length; i += mx) await this.st.write(data.slice(i, i + mx), ms);
+  };
+  Channel.prototype.readMsg = async function (ms) {
+    var h = await this.st.read(8, ms), v = new DataView(h.buffer);
+    var len = v.getUint32(4, true), body = new Uint8Array(0);
+    while (body.length < len) {
+      body = concat([body, await this.st.read(Math.min(len - body.length, 0x400), ms)]);
+      await this.st.windowUpdate();
+    }
+    if (!len) await this.st.windowUpdate();
+    return { a: v.getUint16(0, true), svc: v.getUint16(2, true), body: body };
+  };
+  Channel.prototype.request = async function (cmd, params, ms) {
+    ms = ms || 5000;
+    this.seq = (this.seq + 1) & 0xFFFF;
+    var req = new Map([[K.SEQ, this.seq], [K.CMD, cmd], [K.PARAMS, params === undefined ? null : params]]);
+    var body = MP.encode(req), hdr = new Uint8Array(8), v = new DataView(hdr.buffer);
+    v.setUint16(0, 1, true); v.setUint16(2, this.svc, true); v.setUint32(4, body.length, true);
+    await this.writeMsg(concat([hdr, body]), ms);
+    var rep = MP.decode((await this.readMsg(ms)).body);
+    if (rep.get(K.STATUS) === 1) return null;      // accepted, completes later (announced on the notify stream)
+    if (rep.get(K.STATUS) !== 0) {
+      var res = rep.get(K.RESULT), err = res instanceof Map ? res.get(K.ERR) : null;
+      throw fail("command 0x" + cmd.toString(16) + " refused (status " + rep.get(K.STATUS) + ", error " + err + ")");
+    }
+    return rep.get(K.RESULT);
+  };
+  // the notify stream: read all the time (unread, its messages pile up and the unit hangs), each message
+  // handed to the listeners. A preset load ends with event 4 ({0x69: 4, ...}), about 0.3-0.4 s after the request.
+  Channel.prototype.pump = function (onMsg) {
+    var self = this;
+    (async function () {
+      while (!self.st.link.closed && !self.st.error) {
+        if (self.st.rx.length < 8) { await self.st.wait(100); continue; }
+        try {
+          var m = await self.readMsg(5000), v = null;
+          try { v = MP.decode(m.body); } catch (e) { /* not MessagePack */ }
+          onMsg(v);
+        } catch (e) { return; }
+      }
+    })();
+  };
+
+  // ---- the POD Go session
+  function PodGo(link) { this.link = link; }
+  PodGo.prototype.open = async function () {
+    this.ed = new Channel(this.link, EDITOR); await this.ed.open(4000);
+    // POD Go Edit keeps the notify stream open and read: unread, its messages pile up and the unit hangs
+    // after some 30 preset loads (hx_ctl.py, 2026-11-01).
+    this.nf = new Channel(this.link, NOTIFY); await this.nf.open(4000);
+    var self = this;
+    this.waiters = [];
+    this.nf.pump(function (m) {
+      var ev = m instanceof Map ? m.get(0x69) : null;
+      self.waiters = self.waiters.filter(function (w) { if (w.ev === ev) { w.done(); return false; } return true; });
+    });
+    this.lib = new Channel(this.link, LIBRARIAN); await this.lib.open(4000);
+  };
+  PodGo.prototype.event = function (ev, ms) {       // resolves on that notify event, or after ms
+    var self = this, w = { ev: ev };
+    var p = new Promise(function (resolve) {
+      var t = setTimeout(function () { self.waiters = self.waiters.filter(function (x) { return x !== w; }); resolve(false); }, ms);
+      w.done = function () { clearTimeout(t); resolve(true); };
+    });
+    this.waiters.push(w);
+    return p;
+  };
+  PodGo.prototype.settle = function (ms) { return sleep(ms); };
+  PodGo.prototype.current = async function () {
+    var r = await this.ed.request(CMD.CURRENT);
+    return { setlist: r.get(K.SETLIST), preset: r.get(K.PRESET), name: text(r.get(K.NAME) || new Uint8Array(0)) };
+  };
+  PodGo.prototype.presetList = async function (setlist) {
+    var r = await this.lib.request(CMD.LIB_LIST, new Map([[K.SETLIST, setlist]]), 8000);
+    return r.map(function (m) {
+      var idx = m.keys().next().value, info = m.get(idx);
+      return { index: idx, name: text(info.get(K.NAME) || new Uint8Array(0)) };
+    });
+  };
+  PodGo.prototype.select = async function (preset, setlist) {
+    if (setlist === undefined) setlist = (await this.current()).setlist;
+    var loaded = this.event(4, 4000);                // "preset loaded"
+    await this.ed.request(CMD.LOAD, new Map([[K.SETLIST, setlist], [K.PRESET, preset]]), 10000);
+    if (!(await loaded)) await this.settle(500);     // no event seen: give it a moment anyway
+  };
+  PodGo.prototype.readPreset = async function (withSnap56) {
+    var r = await this.ed.request(CMD.GET_EDITBUF, withSnap56 ? new Map([[0x7a, 1]]) : null, 8000);
+    if (!(r instanceof Uint8Array)) throw fail("the unit didn't send a preset");
+    return r;
+  };
+  PodGo.prototype.writeEditBuffer = async function (blob) {
+    if (text(blob.slice(1, 9)) !== "l6-helix") throw fail("that isn't a POD Go preset");
+    await this.ed.request(CMD.SET_EDITBUF, new Map([[K.PBLOB, blob]]), 10000);
+    await this.settle(1000);
+  };
+  PodGo.prototype.close = async function () {
+    for (var c of [this.lib, this.nf, this.ed]) if (c) await c.st.fin();
+    await sleep(200);
+    await this.link.close();
+  };
+
+  // key 14 in a preset read with the marker: { holder, mask, records: [{ snapshot, name, colour }] } or null
+  var RECSZ = 0x28c, NAME = 0x27e, COLOR = 0x27c;
+  function snapshots56(blob) {
+    for (var k = 0; k + 3 < blob.length; k++) {
+      if (blob[k] === 0x87 && blob[k + 1] === 0x0e && blob[k + 2] === 0xc5) {
+        var holder = blob[k + 5], mask = blob[k + 6], recs = [], j = 0;
+        for (var i = 0; i < 3; i++) if (mask >> i & 1) {
+          var r = blob.subarray(k + 9 + j * RECSZ, k + 9 + (j + 1) * RECSZ); j++;
+          recs.push({ snapshot: i + 4, name: text(r.subarray(NAME, NAME + 11)), colour: r[COLOR] });
+        }
+        return { at: k, holder: holder + 1, mask: mask, records: recs };
+      }
+    }
+    return null;
+  }
+
+  async function connect(usb, opts) {
+    opts = opts || {};
+    if (!usb) throw fail("This browser has no WebUSB: use Chrome or Edge on a computer.", "nousb");
+    var dev = (await usb.getDevices()).find(function (d) { return d.vendorId === DEVICE.vendorId && d.productId === DEVICE.productId; });
+    if (!dev) dev = await usb.requestDevice({ filters: [DEVICE] });
+    await dev.open();
+    if (dev.configuration === null) await dev.selectConfiguration(1);
+    try { await dev.claimInterface(0); }
+    catch (e) { try { await dev.close(); } catch (x) { /* */ } throw fail("Another program has the POD Go: quit POD Go Edit and Line 6 Updater, then try again.", "busy"); }
+    var alt = dev.configuration.interfaces[0].alternate, epIn = null, epOut = null, mtu = 512;
+    alt.endpoints.forEach(function (e) {
+      if (e.type !== "bulk") return;
+      if (e.direction === "in") { epIn = e.endpointNumber; mtu = e.packetSize; } else epOut = e.endpointNumber;
+    });
+    if (epIn === null || epOut === null) throw fail("the POD Go's USB interface isn't the one expected");
+    var link = new Link(dev, epOut, epIn, mtu, opts.log);
+    link.start();
+    await sleep(500);                                   // stale inbound data goes to no stream
+    var pg = new PodGo(link);
+    try { await pg.open(); } catch (e) { await link.close(); throw e; }
+    return pg;
+  }
+
+  root.PODGOUSB = { connect: connect, MP: MP, snapshots56: snapshots56, text: text, CMD: CMD, K: K, APP: APP };
+})(typeof self !== "undefined" ? self : this);

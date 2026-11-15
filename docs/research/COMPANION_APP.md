@@ -54,3 +54,19 @@ On the unit (`podgo/snap6/app_probe.py`), preset 45 NAM Essentials on snapshot 1
 Next: the WebUSB page (hx_ctl's protocol in JavaScript): backup = for each preset, 0x14 load then 0x16 with
 {0x7a: 1}; restore = 0x15 then save; snapshot names and colours = edit the records (name +0x27e, 11 bytes;
 colour +0x27c) for 1-4 in the stock section and for 4-6 in key 14.
+
+## The page, first version (2026-11-15)
+
+`web/pod-go/podgo-usb.js` (hx_ctl.py's protocol in JavaScript: link with routing, streams with sequence,
+window and heartbeat, the three service channels, MessagePack; encoding checked byte for byte against
+Python's msgpack) and `web/pod-go/companion.html` (connect, back up every preset of the setlist to one
+`.podgobackup` file: MessagePack {format, version, created, setlist, complete, presets: [{index, name, blob}]}).
+
+Timing, measured on the unit: load preset (0x14) answers status 1 at once; the notify stream then sends
+{0x69: 20, {0x66: seq}} (the request's completion), a few block/footswitch events, and **{0x69: 4, ...}**
+when the preset has loaded, 0.3-0.42 s after the request; 0x16 then takes about 0.05 s. The page waits for
+event 4 (fallback 0.5 s) instead of fixed delays: a full setlist in about a minute instead of about five.
+
+On the unit (RAM, companion build), in Chrome: backup completed, presets with snapshots 5 and 6 marked.
+With the installed (older) six-snapshot build the same backup completes without 5 and 6 (the marker is
+ignored); the page says so.

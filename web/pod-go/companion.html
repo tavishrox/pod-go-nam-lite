@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>POD Go Companion</title>
+<meta name="description" content="Back up every POD Go preset from the browser, including snapshots 5 and 6 of the six-snapshot firmware.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #e9ebe8; --panel: #f6f7f5; --ink: #1a1d1f; --muted: #5d6468; --rule: #c9cdca;
+  --accent: #c2410c; --accent-ink: #ffffff; --ok: #2f7a3b; --warn: #a15c07; --bad: #b42318;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #15181a; --panel: #1d2124; --ink: #e8ebe9; --muted: #9aa3a7; --rule: #343a3e;
+    --accent: #f0782f; --accent-ink: #1a0d05; --ok: #6fcf7f; --warn: #e3a447; --bad: #f97066; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #15181a; --panel: #1d2124; --ink: #e8ebe9; --muted: #9aa3a7; --rule: #343a3e;
+  --accent: #f0782f; --accent-ink: #1a0d05; --ok: #6fcf7f; --warn: #e3a447; --bad: #f97066; color-scheme: dark; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px; }
+.wrap { max-width: 880px; margin: 0 auto; display: grid; gap: 32px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(34px, 7vw, 52px); font-weight: 800; font-stretch: 85%; line-height: 1; }
+h2 { font-size: 24px; font-weight: 700; font-stretch: 90%; }
+p { margin: 0; max-width: 65ch; }
+a { color: var(--accent); }
+.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.lead { color: var(--muted); font-size: 18px; }
+header, section { display: grid; gap: 14px; }
+.note { border-left: 3px solid var(--warn); padding: 4px 0 4px 14px; color: var(--muted); }
+.note b { color: var(--ink); }
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; display: grid; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+button, .btn { font: 600 15px/1 var(--body); border-radius: 8px; padding: 13px 18px; border: 1px solid var(--accent);
+  background: var(--accent); color: var(--accent-ink); cursor: pointer; text-decoration: none; }
+button.ghost, .btn.ghost { background: transparent; color: var(--ink); border-color: var(--rule); }
+button:disabled { opacity: 0.45; cursor: default; }
+.status { font-size: 15px; color: var(--muted); }
+.status b { color: var(--ink); }
+.status.ok b { color: var(--ok); } .status.bad b { color: var(--bad); }
+.dev { font: 14px/1.5 var(--mono); color: var(--muted); }
+progress { width: 100%; height: 10px; accent-color: var(--accent); }
+.tbl { overflow: auto; max-height: 420px; border: 1px solid var(--rule); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th { font: 600 12px var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); position: sticky; top: 0; background: var(--panel); }
+td.num { font-family: var(--mono); color: var(--muted); }
+.tag { font: 500 12px var(--mono); border: 1px solid var(--rule); border-radius: 4px; padding: 1px 6px; color: var(--muted); }
+.tag.s6 { border-color: var(--accent); color: var(--accent); }
+details pre { margin: 8px 0 0; max-height: 240px; overflow: auto; font: 12px/1.5 var(--mono); background: var(--bg); border: 1px solid var(--rule); border-radius: 8px; padding: 10px; white-space: pre-wrap; }
+ul { margin: 0; padding-left: 20px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">POD Go · POD Go Wireless · firmware 2.50 · experimental</div>
+    <h1>POD Go Companion</h1>
+    <p class="lead">Back up every preset on your POD Go from the browser, including snapshots 5 and 6 when the unit runs the six-snapshot firmware.</p>
+    <p class="note"><b>Before you connect.</b> Use <b>Chrome</b> or <b>Edge</b> on a computer and <b>quit POD Go Edit and Line 6 Updater</b>: only one program can talk to the POD Go at a time. A backup loads each preset on the unit in turn, so <b>save any changes on the POD Go first</b>: unsaved edits are lost when the next preset loads.</p>
+    <p class="note"><b>Unofficial and experimental.</b> Not made or supported by Line 6. It only reads from the POD Go for now; restore comes next. <a href="index.html">Back to the setup page</a>.</p>
+  </header>
+
+  <section aria-labelledby="conn">
+    <h2 id="conn">1. Connect</h2>
+    <div class="panel">
+      <div class="row">
+        <button id="connect" type="button">Connect to the POD Go</button>
+        <button id="disconnect" class="ghost" type="button" hidden>Disconnect</button>
+      </div>
+      <div class="status" id="status" role="status">Not connected.</div>
+      <div class="dev" id="dev" hidden></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="bk">
+    <h2 id="bk">2. Back up</h2>
+    <div class="panel">
+      <p>Reads every preset of the current setlist and saves them in one file on this computer. Takes a minute or two; the POD Go steps through its presets and returns to the one you were on.</p>
+      <ul>
+        <li>With the six-snapshot firmware, presets that use snapshots 5 and 6 are saved with them (marked <span class="tag s6">5·6</span>).</li>
+        <li>Nothing is uploaded: the file stays on this computer.</li>
+      </ul>
+      <div class="row">
+        <button id="backup" type="button" disabled>Back up all presets</button>
+        <button id="stop" class="ghost" type="button" hidden>Stop</button>
+        <a class="btn ghost" id="save" href="#" download hidden>Save the backup file</a>
+      </div>
+      <progress id="prog" max="1" value="0" hidden></progress>
+      <div class="status" id="bkstatus"></div>
+      <div class="tbl" id="tblwrap" hidden>
+        <table>
+          <thead><tr><th>#</th><th>Preset</th><th>Size</th><th>Snapshots 5 and 6</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="next">
+    <h2 id="next">Coming next</h2>
+    <ul>
+      <li><b>Restore</b> one preset or a whole backup, snapshots 5 and 6 included.</li>
+      <li><b>Snapshot names and LED colours</b> for snapshots 1 to 6.</li>
+      <li><b>Patch editing</b>: blocks and parameters.</li>
+    </ul>
+  </section>
+
+  <details><summary>Technical details</summary><pre id="log"></pre></details>
+</div>
+
+<script src="podgo-usb.js"></script>
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var P = window.PODGOUSB, pg = null, stopping = false, url = null;
+  function log(t) { $("log").textContent += t + "\n"; }
+  function status(el, cls, b, rest) {
+    el.className = "status" + (cls ? " " + cls : "");
+    el.textContent = "";
+    if (b) { var s = document.createElement("b"); s.textContent = b; el.appendChild(s); }
+    if (rest) el.appendChild(document.createTextNode(" " + rest));
+  }
+  function connected(on) {
+    $("connect").hidden = on; $("disconnect").hidden = !on; $("backup").disabled = !on; $("dev").hidden = !on;
+  }
+  function errText(e) {
+    if (e && e.name === "NotFoundError") return "No device chosen.";
+    return (e && e.message) || String(e);
+  }
+
+  if (!navigator.usb) {
+    status($("status"), "bad", "This browser can't connect to USB devices.", "Open this page in Chrome or Edge on a computer.");
+    $("connect").disabled = true;
+  }
+
+  $("connect").addEventListener("click", async function () {
+    $("connect").disabled = true;
+    status($("status"), "", "Connecting…", "Pick the POD Go in the browser's list.");
+    try {
+      pg = await P.connect(navigator.usb, { log: log });
+      var cur = await pg.current();
+      connected(true);
+      status($("status"), "ok", "Connected.", "");
+      $("dev").textContent = "Setlist " + cur.setlist + " · preset " + (cur.preset + 1) + ": " + cur.name;
+      log("connected; current " + JSON.stringify(cur));
+    } catch (e) {
+      log("connect: " + errText(e));
+      status($("status"), "bad", "Couldn't connect.", errText(e));
+      pg = null;
+    }
+    $("connect").disabled = false;
+  });
+
+  $("disconnect").addEventListener("click", async function () {
+    if (pg) { try { await pg.close(); } catch (e) { /* gone */ } }
+    pg = null; connected(false); status($("status"), "", "Disconnected.", "");
+  });
+
+  $("stop").addEventListener("click", function () { stopping = true; $("stop").disabled = true; });
+
+  function row(i, name, size, s56) {
+    var tr = document.createElement("tr");
+    [String(i + 1), name, size ? (size / 1024).toFixed(1) + " KB" : "", ""].forEach(function (t, k) {
+      var td = document.createElement("td"); td.textContent = t; if (k === 0 || k === 2) td.className = "num"; tr.appendChild(td);
+    });
+    if (s56) {
+      var tag = document.createElement("span"); tag.className = "tag s6"; tag.textContent = "5·6";
+      tag.title = s56.records.map(function (r) { return "snapshot " + r.snapshot + ": " + r.name; }).join(", ");
+      tr.lastChild.appendChild(tag);
+    }
+    $("rows").appendChild(tr);
+    tr.scrollIntoView({ block: "nearest" });
+  }
+
+  $("backup").addEventListener("click", async function () {
+    if (!pg) return;
+    stopping = false;
+    $("backup").disabled = true; $("disconnect").disabled = true; $("stop").hidden = false; $("stop").disabled = false;
+    $("save").hidden = true; if (url) { URL.revokeObjectURL(url); url = null; }
+    $("rows").textContent = ""; $("tblwrap").hidden = false; $("prog").hidden = false; $("prog").value = 0;
+    var start = null, presets = [], with56 = 0;
+    try {
+      start = await pg.current();
+      var list = await pg.presetList(start.setlist);
+      log("setlist " + start.setlist + ": " + list.length + " presets");
+      for (var i = 0; i < list.length && !stopping; i++) {
+        status($("bkstatus"), "", "Reading " + (i + 1) + " of " + list.length + ":", list[i].name);
+        await pg.select(i, start.setlist);
+        var blob = await pg.readPreset(true), s56 = P.snapshots56(blob);
+        if (s56) with56++;
+        presets.push({ index: i, name: list[i].name, blob: blob });
+        row(i, list[i].name, blob.length, s56);
+        $("prog").value = (i + 1) / list.length;
+      }
+      status($("bkstatus"), "", "Returning to preset " + (start.preset + 1) + "…", "");
+      await pg.select(start.preset, start.setlist);
+      var file = P.MP.encode(new Map([
+        ["format", "podgo-companion-backup"], ["version", 1], ["created", new Date().toISOString()],
+        ["setlist", start.setlist], ["complete", !stopping],
+        ["presets", presets.map(function (p) { return new Map([["index", p.index], ["name", p.name], ["blob", p.blob]]); })]
+      ]));
+      url = URL.createObjectURL(new Blob([file], { type: "application/octet-stream" }));
+      var d = new Date(), stamp = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      $("save").href = url; $("save").download = "POD Go backup " + stamp + ".podgobackup"; $("save").hidden = false;
+      status($("bkstatus"), stopping ? "" : "ok", stopping ? "Stopped." : "Backup ready.",
+        presets.length + " presets read, " + with56 + " with snapshots 5 and 6. Save the file to keep it." +
+        (with56 ? "" : " No preset came back with snapshots 5 and 6. If some of yours use them, the POD Go is running firmware without companion support (six-snapshot builds made before 15 November 2026 keep 5 and 6 in the preset but don't hand them out): build and install the current firmware on the setup page. Your snapshots 5 and 6 are still safe on the unit."));
+    } catch (e) {
+      log("backup: " + errText(e));
+      status($("bkstatus"), "bad", "The backup stopped.", errText(e) + (presets.length ? " " + presets.length + " presets were read." : ""));
+    }
+    $("stop").hidden = true; $("backup").disabled = !pg; $("disconnect").disabled = false;
+  });
+})();
+</script>
+</body>
+</html>
