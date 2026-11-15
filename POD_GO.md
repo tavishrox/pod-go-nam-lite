@@ -280,7 +280,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 ```
 
 It checks your file's MD5, builds the NAM code and runs it in a SHARC simulator against a reference
-(bit for bit, including the 32-sample call test), then writes `build/POD_Go_v2.50.0_NAM_A2_Lite.hxf`.
+(bit for bit, including the 32-sample call test), then writes `build/POD_Go_v2.50.0_NAM.hxf` (`_NAM_TS` for the ToneShift Edition, then `_Names` and `_6Snap` for those options).
 `--donor plexi` builds the earlier variant that replaces Brit Plexi Brt instead of Elektrik.
 
 ## Tested on the unit

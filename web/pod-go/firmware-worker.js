@@ -23,16 +23,16 @@ var PYODIDE = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
 var STOCK_MD5 = "e0ea3e1ed32f0f353b79f6ad39631838";
 var BUILT_MD5 = "61920a6cdb5342cecffcd968e1ae6ad1";
 var KERNEL_ARGS = ["--mid-sweep", "--podgo", "--plexi", "--static-sdram", "--block32"];
-var OUT_NAME = "POD_Go_v2.50.0_NAM_A2_Lite.hxf";
+var OUT_NAME = "POD_Go_v2.50.0_NAM.hxf";
 var BUILT_MD5_EDITION = "70cfd341bb4bf00422f7ea19c5b49e95";
-var OUT_NAME_EDITION = "POD_Go_v2.50.0_NAM_A2_Lite_ToneShift_Edition.hxf";
+var OUT_NAME_EDITION = "POD_Go_v2.50.0_NAM_TS.hxf";
 var BUILT_MD5_NAMES = "2cb121444bfe5e4a9259903b7ea2dc83";
 var BUILT_MD5_EDITION_NAMES = "0b27b025a84fc4a6d7af77f72f85d5ea";
 // --snapshots6: "edition,names" -> MD5 (build_podgo.BUILT_MD5_SNAP6)
 var BUILT_MD5_SNAP6 = {"false,false": "07c56e5a59181113d9c2c210d88a7d24", "true,false": "3011fce6798ebb916109434415014000",
   "false,true": "8ec7f3f0fb7560d6645e75a39b81f2ee", "true,true": "22d63d133a9335f8dcd1078fe4c27f40"};
 // six snapshots only: podgo/snapshots6.py's OUT_NAME and BUILT_MD5
-var OUT_NAME_ONLY6 = "POD_Go_v2.50.0_Snap6.hxf";
+var OUT_NAME_ONLY6 = "POD_Go_v2.50.0_6Snap.hxf";
 var BUILT_MD5_ONLY6 = "e96852fe987acd896ca16bddfc3ea868";
 var EDITION_SOURCES = ["podgo/splash.py", "art/nam-a2-edition/wired.png", "art/nam-a2-edition/wireless.png"];
 
@@ -140,7 +140,7 @@ async function build(stock, edition, names, snap6, only6) {
   var of = only6 ? 5 : 6;
   var outName = edition ? OUT_NAME_EDITION : OUT_NAME;
   if (names) outName = outName.replace(".hxf", "_Names.hxf");
-  if (snap6) outName = outName.replace(".hxf", "_Snap6.hxf");
+  if (snap6) outName = outName.replace(".hxf", "_6Snap.hxf");
   var pinnedMd5 = names ? (edition ? BUILT_MD5_EDITION_NAMES : BUILT_MD5_NAMES) : (edition ? BUILT_MD5_EDITION : BUILT_MD5);
   if (snap6) pinnedMd5 = BUILT_MD5_SNAP6[!!edition + "," + !!names];
   if (only6) { edition = names = false; snap6 = true; outName = OUT_NAME_ONLY6; pinnedMd5 = BUILT_MD5_ONLY6; }

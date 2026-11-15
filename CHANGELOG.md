@@ -49,6 +49,8 @@ Major changes, newest first. The repository has no version numbers, so each entr
 - **Six snapshots only**: a choice at the top of the builder (or `podgo/snapshots6.py` alone) for stock 2.50 with
   six snapshots and nothing else, MD5 d4fde819 (the same six-snapshot code as the builds above).
 - Setup page: hidden boxes now hide (the boot-screen preview showed even when its option was off).
+- Shorter firmware file names: `POD_Go_v2.50.0_NAM.hxf`, `_NAM_TS` for the ToneShift Edition, then `_Names` and
+  `_6Snap` for those options; `POD_Go_v2.50.0_6Snap.hxf` for six snapshots only. Same bytes as before.
 
 ## 2026-11-11: NAM FX Loop template
 

@@ -80,7 +80,7 @@ STOCK = {SELECT: '2de9f04f', RESET: '2de9f043', CC69_CMP: '032c', SER: '2de9f04f
          **{va: a for va, (a, _) in UI_BYTES.items()},
          **{va: struct.pack('<I', w).hex() for va, (_, w) in APP_PTRS.items()}}
 STOCK_MD5 = 'e0ea3e1ed32f0f353b79f6ad39631838'
-OUT_NAME = 'POD_Go_v2.50.0_Snap6.hxf'                   # six snapshots on stock, nothing else (the page's "only" choice)
+OUT_NAME = 'POD_Go_v2.50.0_6Snap.hxf'                   # six snapshots on stock, nothing else (the page's "only" choice)
 BUILT_MD5 = 'e96852fe987acd896ca16bddfc3ea868'                                      # that build's .hxf: web/pod-go/firmware-worker.js compares
 
 
