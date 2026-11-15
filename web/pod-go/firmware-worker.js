@@ -6,6 +6,7 @@
 //
 // Messages in:  { stock: ArrayBuffer, edition: bool, names: bool, snap6: bool }   (names: the Model knob shows the IR's name,
 //   podgo/model_names.py; snap6: hold MODE for six snapshots, podgo/snapshots6.py)
+//               { stock: ArrayBuffer, only6: true }   six snapshots on stock 2.50, no NAM (snapshots6.make_image)
 //   (edition: the ToneShift Edition boot screens, art/nam-a2-edition/,
 //                                                       drawn over the boot screens of the user's own file)
 //               { plan: true, installed: ArrayBuffer | null }   after a build: the RAM run of the built file
@@ -30,6 +31,9 @@ var BUILT_MD5_EDITION_NAMES = "0b27b025a84fc4a6d7af77f72f85d5ea";
 // --snapshots6: "edition,names" -> MD5 (build_podgo.BUILT_MD5_SNAP6)
 var BUILT_MD5_SNAP6 = {"false,false": "2aaa7a361f804bb21074a8fed73ec6b7", "true,false": "6218d93a056a2e33a94afddd84d3485d",
   "false,true": "4781124ccc37a38580d08257498330f5", "true,true": "240fd8c66361564c2b38ab44f34809b7"};
+// six snapshots only: podgo/snapshots6.py's OUT_NAME and BUILT_MD5
+var OUT_NAME_ONLY6 = "POD_Go_v2.50.0_Snap6.hxf";
+var BUILT_MD5_ONLY6 = "5e198d45369daa22f5866d5632e5c827";
 var EDITION_SOURCES = ["podgo/splash.py", "art/nam-a2-edition/wired.png", "art/nam-a2-edition/wireless.png"];
 
 // What the build needs, relative to the repository root.
@@ -85,6 +89,14 @@ var DRIVER = [
   "                                       snapshots6=snap6)",
   "    open('/repo/build/nam_lite.l6ia', 'wb').write(image)",
   "    return out.getvalue()",
+  "def make6():",
+  "    import patch_amp, snapshots6",
+  "    out = io.StringIO()",
+  "    with contextlib.redirect_stdout(out):",
+  "        data, _ = patch_amp.load_l6ia_from_any('/repo/build/stock.hxf')",
+  "        image = snapshots6.make_image(data)",
+  "    open('/repo/build/nam_lite.l6ia', 'wb').write(image)",
+  "    return out.getvalue()",
 ].join("\n");
 
 var py = null, editionLoaded = false, built = null;   // built: the last build's file name in /repo/build
@@ -124,13 +136,14 @@ async function loadEdition(p) {
   editionLoaded = true;
 }
 
-async function build(stock, edition, names, snap6) {
-  var of = 6;
+async function build(stock, edition, names, snap6, only6) {
+  var of = only6 ? 5 : 6;
   var outName = edition ? OUT_NAME_EDITION : OUT_NAME;
   if (names) outName = outName.replace(".hxf", "_Names.hxf");
   if (snap6) outName = outName.replace(".hxf", "_Snap6.hxf");
   var pinnedMd5 = names ? (edition ? BUILT_MD5_EDITION_NAMES : BUILT_MD5_NAMES) : (edition ? BUILT_MD5_EDITION : BUILT_MD5);
   if (snap6) pinnedMd5 = BUILT_MD5_SNAP6[!!edition + "," + !!names];
+  if (only6) { edition = names = false; snap6 = true; outName = OUT_NAME_ONLY6; pinnedMd5 = BUILT_MD5_ONLY6; }
   progress(1, of, "Loading the build tools (about 15 MB, once)…");
   var p = await boot();
   if (edition) await loadEdition(p);
@@ -146,7 +159,7 @@ async function build(stock, edition, names, snap6) {
   }
   post({ type: "log", text: "stock firmware: POD Go 2.50 (MD5 " + md5 + ")\n" });
 
-  var run = p.globals.get("run"), make = p.globals.get("make");
+  var run = p.globals.get("run"), make = p.globals.get(only6 ? "make6" : "make");
   function step(n, text, argv) {
     progress(n, of, text);
     post({ type: "log", text: "$ " + argv.join(" ") + "\n" });
@@ -155,13 +168,20 @@ async function build(stock, edition, names, snap6) {
     return out;
   }
   try {
-    step(3, "Building the NAM kernel…", ["tools/sharc/nam_multi.py"].concat(KERNEL_ARGS, ["-o", "build/nam_lite.asm"]));
-    progress(4, of, "Adding NAM A2 Lite to the model list…");
-    post({ type: "log", text: "$ build_podgo.make_image\n" });
-    post({ type: "log", text: make(!!edition, !!names, !!snap6) });
-    var report = step(5, "Checking every checksum…", ["tools/l6ia_verify.py", "build/nam_lite.l6ia"]);
+    var n = 3;
+    if (only6) {
+      progress(n++, of, "Adding six snapshots…");
+      post({ type: "log", text: "$ snapshots6.make_image\n" });
+      post({ type: "log", text: make() });
+    } else {
+      step(n++, "Building the NAM kernel…", ["tools/sharc/nam_multi.py"].concat(KERNEL_ARGS, ["-o", "build/nam_lite.asm"]));
+      progress(n++, of, "Adding NAM A2 Lite to the model list…");
+      post({ type: "log", text: "$ build_podgo.make_image\n" });
+      post({ type: "log", text: make(!!edition, !!names, !!snap6) });
+    }
+    var report = step(n++, "Checking every checksum…", ["tools/l6ia_verify.py", "build/nam_lite.l6ia"]);
     if (report.indexOf("ALL OK") < 0) throw new Error("The built image failed its checksum check.");
-    step(6, "Packing the file…", ["tools/hxf.py", "pack", "build/nam_lite.l6ia", "build/" + outName, "--donor", "build/stock.hxf"]);
+    step(n++, "Packing the file…", ["tools/hxf.py", "pack", "build/nam_lite.l6ia", "build/" + outName, "--donor", "build/stock.hxf"]);
   } finally {
     run.destroy();
     make.destroy();
@@ -173,7 +193,7 @@ async function build(stock, edition, names, snap6) {
     try { p.FS.unlink("/repo/build/" + f); } catch (e) { /* gone */ }
   });
   var buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-  post({ type: "done", file: outName, bytes: buf, md5: outMd5, pinned: outMd5 === pinnedMd5, edition: !!edition, names: !!names, snap6: !!snap6 }, [buf]);
+  post({ type: "done", file: outName, bytes: buf, md5: outMd5, pinned: outMd5 === pinnedMd5, edition: !!edition, names: !!names, snap6: !!snap6, only6: !!only6 }, [buf]);
 }
 
 // The RAM run of the last build: what tools/hxf_ram.py run would send. It checks the unit's eMMC
@@ -213,7 +233,7 @@ self.onmessage = function (e) {
     });
     return;
   }
-  build(e.data.stock, e.data.edition, e.data.names, e.data.snap6).catch(function (err) {
+  build(e.data.stock, e.data.edition, e.data.names, e.data.snap6, e.data.only6).catch(function (err) {
     post({ type: "error", text: err && err.message ? err.message : String(err) });
   });
 };

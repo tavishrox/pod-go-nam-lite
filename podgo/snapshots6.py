@@ -76,6 +76,8 @@ STOCK = {SELECT: '2de9f04f', RESET: '2de9f043', CC69_CMP: '032c', SER: '2de9f04f
          **{va: struct.pack('<I', w).hex() for va, (_, w) in UI_POOLS.items()},
          **{va: a for va, (a, _) in UI_BYTES.items()}}
 STOCK_MD5 = 'e0ea3e1ed32f0f353b79f6ad39631838'
+OUT_NAME = 'POD_Go_v2.50.0_Snap6.hxf'                   # six snapshots on stock, nothing else (the page's "only" choice)
+BUILT_MD5 = '5e198d45369daa22f5866d5632e5c827'                                      # that build's .hxf: web/pod-go/firmware-worker.js compares
 
 
 def assemble(stock, debug=True):
@@ -166,6 +168,15 @@ def entry0(e0, code, SYMS, log=print):
     return bytes(out)
 
 
+def make_image(stock_data, log=print):
+    """The L6IA image of stock 2.50 with six snapshots and nothing else (the web page calls this too)."""
+    import kit_patch_amp as kp
+    import l6ia
+    code, syms = code_with_images(stock_data)
+    image, _, _ = l6ia.rebuild_archive(stock_data, {0: entry0(kp.get_entry_swapped(stock_data, 0), code, syms, log=log)})
+    return image
+
+
 def main():
     a = sys.argv[1:]
     if not a or a[0].startswith('-'):
@@ -176,7 +187,7 @@ def main():
         sys.exit(f'{stock}: MD5 {md5}, not POD_Go_v2.50.0_0x6e984472.hxf')
     if '--update-code' in a:
         return update_code(stock)
-    out = a[a.index('-o') + 1] if '-o' in a else os.path.join(ROOT, 'build', 'POD_Go_v2.50.0_Snap6_test.hxf')
+    out = a[a.index('-o') + 1] if '-o' in a else os.path.join(ROOT, 'build', OUT_NAME)
     import kit_patch_amp as kp
     import l6ia
     import patch_amp
@@ -193,7 +204,10 @@ def main():
     if 'ALL OK' not in rep:
         sys.exit('snapshots6.py: the image failed its checksum check\n' + rep)
     subprocess.run([py, os.path.join(ROOT, 'tools', 'hxf.py'), 'pack', img, out, '--donor', base], check=True)
-    print(f'Done: {out} (MD5 {hashlib.md5(open(out, "rb").read()).hexdigest()})')
+    got = hashlib.md5(open(out, "rb").read()).hexdigest()
+    plain = '--base' not in a and '--debug' not in a
+    print(f'Done: {out} (MD5 {got}' + ((', the project build' if got == BUILT_MD5 else ', NOT the project build: please report')
+                                      if plain else '') + ')')
     print(f'Run it from RAM: python3 tools/hxf_ram.py run {os.path.relpath(out, ROOT)} --stock <the .hxf installed> --writes ram')
 
 

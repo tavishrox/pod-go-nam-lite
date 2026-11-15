@@ -28,6 +28,9 @@ def test_md5s_and_options_match():
     assert js_value('BUILT_MD5_EDITION_NAMES') == build_podgo.BUILT_MD5_EDITION_NAMES
     assert build_podgo.out_name(True, True) == 'POD_Go_v2.50.0_NAM_A2_Lite_ToneShift_Edition_Names.hxf'
     assert build_podgo.out_name(True, True, True) == 'POD_Go_v2.50.0_NAM_A2_Lite_ToneShift_Edition_Names_Snap6.hxf'
+    import snapshots6
+    assert js_value('OUT_NAME_ONLY6') == snapshots6.OUT_NAME
+    assert js_value('BUILT_MD5_ONLY6') == snapshots6.BUILT_MD5
     snap6 = js_value('BUILT_MD5_SNAP6')
     assert {tuple(k == 'true' for k in key.split(',')): v for key, v in snap6.items()} == build_podgo.BUILT_MD5_SNAP6
     for path in js_value('EDITION_SOURCES'):

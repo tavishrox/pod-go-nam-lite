@@ -15,6 +15,9 @@ Major changes, newest first. The repository has no version numbers, so each entr
 - Installed on a POD Go Wireless (ToneShift Edition with names and six snapshots): six-snapshot screen, LEDs,
   switches, MIDI, save and reload, and a power-cycle all passed. MD5s 2aaa7a36 (Elektrik), 6218d93a (Edition),
   4781124c (names), 240fd8c6 (Edition and names).
+- **Six snapshots only**: a choice at the top of the builder (or `podgo/snapshots6.py` alone) for stock 2.50 with
+  six snapshots and nothing else, MD5 5e198d45 (ran on a POD Go Wireless from RAM, with POD Go Edit).
+- Setup page: hidden boxes now hide (the boot-screen preview showed even when its option was off).
 
 ## 2026-11-11: NAM FX Loop template
 

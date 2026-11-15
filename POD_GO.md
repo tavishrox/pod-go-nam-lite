@@ -129,7 +129,10 @@ a different capture.
 
 ### Six snapshots (experimental)
 
-Tick **Six snapshots** on the setup page (or `--snapshots6` on the command line).
+Tick **Six snapshots** on the setup page (or `--snapshots6` on the command line). Or choose **Six snapshots
+only** at the top of the builder for stock 2.50 with six snapshots and nothing else: no NAM, Elektrik as it
+was (`python3 podgo/snapshots6.py POD_Go_v2.50.0_0x6e984472.hxf` on the command line; MD5 5e198d45, the file
+tested on a POD Go from RAM, with POD Go Edit).
 
 - **Hold MODE** (top right) and the footswitches become six snapshot switches: bottom row **1 2 3**, top row
   **4 5 6** (Bank Up and Bank Down become 4 and 1). The screen shows six tiles, the LED rings follow and the

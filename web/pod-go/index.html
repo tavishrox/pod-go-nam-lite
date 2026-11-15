@@ -80,6 +80,9 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-spa
 .s6info { border-left: 3px solid var(--accent); padding: 2px 0 2px 14px; font-size: 14px; color: var(--muted); }
 .s6info p, .s6info ul { margin: 6px 0; }
 .s6info b { color: var(--ink); }
+.kind, .namopts { display: grid; gap: 10px; }
+[hidden] { display: none !important; }
+.kind { padding-bottom: 10px; border-bottom: 1px solid var(--rule); }
 .row { display: flex; flex-wrap: wrap; gap: 10px; }
 button.btn { cursor: pointer; }
 details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
@@ -109,9 +112,9 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
     </div>
     <p class="note"><b>Unofficial and experimental.</b> Not made or supported by Line 6 or Yamaha Guitar Group. Installing modified firmware is at your own risk and may void your warranty. Back up first, and read Recovery below before you start.</p>
     <p class="note"><b>A word from me on risk.</b> Line 6 have commented on the mods now appearing for the HX Stomp, HX Effects and POD Go, and they seem encouraged that people are experimenting. That doesn't surprise me: the company was built that way. They have also warned against installing third-party firmware, because support will be very limited if something goes wrong. That is absolutely true. If you don't fully understand what you're installing, or you'd be uncomfortable bricking your unit, sleep on it. I talk about who this is for in the video: it's for tinkerers, the kind of folks who hang around on GitHub, the same folks who were modding Tube Screamers in the 80s. Just a heads-up: understand the risks before you start. <i>ToneShift</i></p>
-  </header>
     <p class="note"><b>No Line 6 files in this project.</b> This repository and this page contain no Line 6 firmware, code or artwork. Everything that uses Line 6's work is made during the build, on your computer, from the official firmware file you download from Line 6: the NAM block is written into your own copy, the ToneShift boot screen is drawn over your own boot screen, and the six-snapshot tiles are drawn from your own firmware's snapshot images. Nothing you drop here is uploaded.</p>
 
+  </header>
   <section aria-labelledby="what">
     <h2 id="what">What it gives you</h2>
     <div class="grid">
@@ -126,14 +129,19 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
     <h2 id="how">Setting it up</h2>
     <ol class="steps">
       <li><div><h3>Back up and get the stock firmware</h3><p>Back up your presets and IRs with POD Go Edit. Keep Line 6's official <code>POD_Go_v2.50.0_0x6e984472.hxf</code> somewhere safe: you build from it, and it is your way back.</p></div></li>
-      <li id="build"><div><h3>Build the NAM firmware</h3><p>Drop your stock file here. This page adds NAM A2 Lite to it, in your browser, and gives you the new file to install. Nothing is uploaded: your firmware never leaves this computer, so no Line 6 code is ever shared.</p>
+      <li id="build"><div><h3>Build the NAM firmware</h3><p>Drop your stock file here. This page adds NAM A2 Lite (or, if you choose, just six snapshots) to it, in your browser, and gives you the new file to install. Nothing is uploaded: your firmware never leaves this computer, so no Line 6 code is ever shared.</p>
         <div class="builder">
           <label class="opt"><input type="checkbox" id="fwedition"> <span><b>ToneShift Edition</b>: add the boot screen with ToneShift's "NAM A2 Edition" lettering, drawn over your POD Go's own boot screen</span></label>
+          <div class="kind" role="radiogroup" aria-label="What to build">
+            <label class="opt"><input type="radio" name="fwkind" id="fwkindnam" value="nam" checked> <span><b>NAM A2 Lite</b>, with the options below</span></label>
+            <label class="opt"><input type="radio" name="fwkind" id="fwkindsix" value="six"> <span><b>Six snapshots only</b>: stock 2.50 with six snapshots and nothing else (no NAM, Elektrik stays as it was) · <i>experimental</i>: tested on a POD Go</span></label>
+          </div>
+          <div class="namopts" id="namopts">
           <div class="edprev" id="edprev" hidden><img src="../../art/nam-a2-edition/wireless.png" alt="The ToneShift Edition boot-screen lettering"><span>Shown over the stock POD Go boot screen. The overlay holds only this lettering; your POD Go supplies the rest.</span></div>
           <label class="opt"><input type="checkbox" id="fwnames"> <span><b>Show capture names on the Model knob</b> (e.g. "4 Mesa JP2C" instead of 0.3) · <i>experimental</i>: tested from RAM on a POD Go</span></label>
-          <label class="drop" id="fwdrop" tabindex="0" for="fwpick">
           <label class="opt"><input type="checkbox" id="fwsnap6"> <span><b>Six snapshots</b>: hold the MODE switch for snapshots 1&ndash;6 on the footswitches · <i>experimental</i>: installed and tested on a POD Go Wireless</span></label>
           <div class="s6info" id="s6info" hidden>
+          </div>
             <p><b>What it does.</b> Hold the top-right <b>MODE</b> switch and the footswitches become six snapshot switches: bottom row <b>1 2 3</b>, top row <b>4 5 6</b> (Bank Up and Bank Down become snapshots 4 and 1). The screen shows six tiles, the LED rings follow, and the top-right icon shows 5 and 6. Hold MODE again for the normal footswitches and banks. MIDI CC69 values 4 and 5 select snapshots 5 and 6.</p>
             <p><b>Saving.</b> Snapshots 5 and 6 are saved inside the preset when you save on the POD Go, and they survive a power-cycle. As with the stock snapshots, save while on each snapshot you change.</p>
             <p><b>Why POD Go Edit can't see 5 and 6.</b> POD Go Edit only knows about four snapshots, and this change lives in the POD Go itself. The editor still connects, edits and saves normally, and saving from the editor keeps 5 and 6, because the POD Go writes them. Anything that sends a whole preset from the computer replaces them, so 5 and 6 are lost:</p>
@@ -145,6 +153,7 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
             <p>To copy or move a preset that uses 5 and 6, save it to the new slot on the POD Go itself.</p>
           </div>
             <strong>Drop POD_Go_v2.50.0_0x6e984472.hxf here</strong>
+          <label class="drop" id="fwdrop" tabindex="0" for="fwpick">
             <span>or click to choose · about 45 MB · it stays on this computer</span>
             <span>Always the stock file, even if your POD Go already runs a NAM build: every build starts from your own copy of Line 6's file, because their code can't be shared.</span>
           </label>
@@ -263,7 +272,8 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
         url = URL.createObjectURL(new Blob([m.bytes], { type: "application/octet-stream" }));
         save.href = url; save.download = m.file; done.hidden = false;
         var extra = m.names ? " with Model-knob names (experimental)" : "";
-        if (m.pinned && m.snap6) status("ok", "Verified: your POD Go firmware" + (m.edition ? " (ToneShift Edition)" : "") + " with six snapshots" + (m.names ? " and Model-knob names" : "") + " is ready.", " It is byte for byte the project's build with these options (MD5 " + m.md5 + "), experimental. Download it, then install it with Line 6 Updater (step 3).");
+        if (m.pinned && m.only6) status("ok", "Verified: your POD Go firmware with six snapshots (no NAM) is ready.", " It is byte for byte the project's six-snapshot build (MD5 " + m.md5 + "), the file tested on a POD Go: stock 2.50 with six snapshots and nothing else. Download it, then install it with Line 6 Updater (step 3).");
+        else if (m.pinned && m.snap6) status("ok", "Verified: your POD Go firmware" + (m.edition ? " (ToneShift Edition)" : "") + " with six snapshots" + (m.names ? " and Model-knob names" : "") + " is ready.", " It is byte for byte the project's build with these options (MD5 " + m.md5 + "), experimental. Download it, then install it with Line 6 Updater (step 3).");
         else if (m.pinned && m.names) status("ok", "Verified: your POD Go firmware" + (m.edition ? " (ToneShift Edition)" : "") + extra + " is ready.", " It is byte for byte the project's build" + extra + " (MD5 " + m.md5 + "): the tested build plus a small display change that only alters the Model knob's text. Download it, then install it with Line 6 Updater (step 3).");
         else if (m.pinned && m.edition) status("ok", "Verified: your POD Go firmware (ToneShift Edition) is ready.", " It is byte for byte the project's ToneShift Edition build (MD5 " + m.md5 + "): the build tested on a POD Go plus the boot screen. Download it, then install it with Line 6 Updater (step 3).");
         else if (m.pinned) status("ok", "Verified: your POD Go firmware is ready.", " It is byte for byte the build the project tested on a POD Go (MD5 " + m.md5 + "). Download it, then install it with Line 6 Updater (step 3).");
@@ -274,7 +284,7 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
         else status("bad", "The build stopped.", " Nothing was written. Check your internet connection (the tools download the first time) and try again; the technical details say what happened. " + m.text.slice(0, 300));
       }
     };
-    worker.postMessage({ stock: buf, edition: $("fwedition").checked, names: $("fwnames").checked, snap6: $("fwsnap6").checked }, [buf]);
+    worker.postMessage({ stock: buf, edition: $("fwedition").checked, names: $("fwnames").checked, snap6: $("fwsnap6").checked, only6: $("fwkindsix").checked }, [buf]);
   }
   function fromFile(f) {
     if (!f) return;
@@ -286,7 +296,12 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
   $("fwedition").addEventListener("change", function () { $("edprev").hidden = !this.checked; });
   window.podgoBuild = start;                 // for testing: podgoBuild(arrayBuffer)
   pick.addEventListener("change", function () { fromFile(pick.files[0]); pick.value = ""; });
-  $("fwsnap6").addEventListener("change", function () { $("s6info").hidden = !this.checked; });
+  function kind() {
+    var six = $("fwkindsix").checked;
+    $("namopts").hidden = six;
+    $("s6info").hidden = !(six || $("fwsnap6").checked);
+  }
+  ["fwsnap6", "fwkindnam", "fwkindsix"].forEach(function (id) { $(id).addEventListener("change", kind); });
   drop.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick.click(); } });
   ["dragenter", "dragover"].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add("over"); }); });
   ["dragleave", "drop"].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.remove("over"); }); });
