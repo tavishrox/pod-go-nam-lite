@@ -405,6 +405,94 @@
     return null;
   }
 
+  // ---- snapshot names and LED colours (1 to 6), edited in place in a preset blob
+  // Stock section (key 10 of the preset): {..., 10: [4 x {4: name str, 12: colour, ...}]}; entries 0-2 are
+  // snapshots 1-3, entry 3 is whichever of 4-6 the unit holds in its fourth slot (key 14's holder, else 4).
+  // Key 14 (six-snapshot firmware, read with the app marker) holds the records of the other two: name at
+  // +0x27e (11 bytes, NUL-padded), colour at +0x27c. Only bytes inside section 10 change; the offset table's
+  // end entries follow a length change, so the unit's own bytes stay as they were everywhere else.
+  var COLOURS = ["Auto", "White", "Red", "Dark Orange", "Light Orange", "Yellow", "Green", "Turquoise", "Blue", "Violet", "Pink", "Off"];
+  var NAME_MAX = 10;
+  function mapEntries(b, p) {       // [{k, ks, vs, ve}] of the map at p, and where it ends
+    var t = b[p], n, q, dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    if ((t & 0xf0) === 0x80) { n = t & 15; q = p + 1; }
+    else if (t === 0xde) { n = dv.getUint16(p + 1); q = p + 3; }
+    else throw fail("preset: a map was expected");
+    var out = [];
+    for (var i = 0; i < n; i++) { var k = dec(b, q), v = dec(b, k[1]); out.push({ k: k[0], ks: q, vs: k[1], ve: v[1] }); q = v[1]; }
+    return { entries: out, end: q };
+  }
+  function arrayItems(b, p) {
+    var t = b[p], n, q, dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    if ((t & 0xf0) === 0x90) { n = t & 15; q = p + 1; }
+    else if (t === 0xdc) { n = dv.getUint16(p + 1); q = p + 3; }
+    else throw fail("preset: an array was expected");
+    var out = [];
+    for (var i = 0; i < n; i++) { var e = dec(b, q)[1]; out.push({ s: q, e: e }); q = e; }
+    return out;
+  }
+  function layout(blob) {           // where everything editable is
+    if (text(blob.slice(1, 9)) !== "l6-helix") throw fail("that isn't a POD Go preset");
+    var p = dec(blob, 0)[1], tableAt = p, root = dec(blob, p)[1];
+    var top = mapEntries(blob, root), s10 = top.entries.find(function (e) { return e.k === 10; });
+    if (!s10) throw fail("preset: no snapshot section");
+    var sec = mapEntries(blob, s10.vs), list = sec.entries.find(function (e) { return e.k === 10; });
+    var stock = arrayItems(blob, list.vs).map(function (it) {
+      var m = mapEntries(blob, it.s), nm = m.entries.find(function (e) { return e.k === 4; }), col = m.entries.find(function (e) { return e.k === 12; });
+      return { name: nm, colour: col };
+    });
+    var s56 = snapshots56(blob), recs = [];
+    if (s56) {
+      var j = 0;
+      for (var i = 0; i < 3; i++) if (s56.mask >> i & 1) { recs.push({ snapshot: i + 4, at: s56.at + 9 + j * RECSZ }); j++; }
+    }
+    return { tableAt: tableAt, stock: stock, holder: s56 ? s56.holder : 4, recs: recs, has56: !!s56 };
+  }
+  function snapshotList(blob) {     // [{ snapshot, name, colour, where }] for 1-6 (5 and 6 only when the preset carries them)
+    var L = layout(blob), out = [];
+    L.stock.forEach(function (st, i) {
+      var nm = dec(blob, st.name.vs)[0], col = st.colour ? dec(blob, st.colour.vs)[0] : 0;
+      out.push({ snapshot: i < 3 ? i + 1 : L.holder, name: text(nm), colour: col, where: { stock: i } });
+    });
+    L.recs.forEach(function (r) {
+      out.push({ snapshot: r.snapshot, name: text(blob.subarray(r.at + NAME, r.at + NAME + 11)), colour: blob[r.at + COLOR], where: { rec: r.snapshot } });
+    });
+    out.sort(function (a, b) { return a.snapshot - b.snapshot; });
+    return { snapshots: out, has56: L.has56 };
+  }
+  function cleanName(name) {
+    var s = String(name).replace(/[^\x20-\x7e]/g, "").slice(0, NAME_MAX);
+    return new TextEncoder().encode(s);
+  }
+  function setSnapshot(blob, snapshot, name, colour) {   // a new blob with that snapshot's name and/or colour changed
+    var L = layout(blob), b = blob.slice();
+    var rec = L.recs.find(function (r) { return r.snapshot === snapshot; });
+    var si = snapshot <= 3 ? snapshot - 1 : (snapshot === L.holder ? 3 : -1);
+    if (rec) {
+      if (name !== null && name !== undefined) { var n = cleanName(name), f = new Uint8Array(11); f.set(n); b.set(f, rec.at + NAME); }
+      if (colour !== null && colour !== undefined) b[rec.at + COLOR] = colour;
+      return b;
+    }
+    if (si < 0) throw fail("snapshot " + snapshot + " isn't in this preset");
+    var st = L.stock[si];
+    if (colour !== null && colour !== undefined) {
+      if (!st.colour) throw fail("preset: snapshot " + snapshot + " has no colour entry");
+      if (st.colour.ve - st.colour.vs !== 1 || b[st.colour.vs] > 0x7f) throw fail("preset: unexpected colour encoding");
+      b[st.colour.vs] = colour;
+    }
+    if (name !== null && name !== undefined) {
+      var nb = concat([cleanName(name), Uint8Array.of(0)]);         // as the unit writes it: text and a NUL
+      var enc = concat([nb.length < 32 ? Uint8Array.of(0xa0 | nb.length) : Uint8Array.of(0xd9, nb.length), nb]);
+      var delta = enc.length - (st.name.ve - st.name.vs);
+      b = concat([b.subarray(0, st.name.vs), enc, b.subarray(st.name.ve)]);
+      if (delta) {                                  // section 10 is the last: only the table's end entries move
+        var tv = new DataView(b.buffer, b.byteOffset + L.tableAt + 3, 48);
+        for (var w = 10; w < 12; w++) tv.setUint32(4 * w, tv.getUint32(4 * w, true) + delta, true);
+      }
+    }
+    return b;
+  }
+
   async function connect(usb, opts) {
     opts = opts || {};
     if (!usb) throw fail("This browser has no WebUSB: use Chrome or Edge on a computer.", "nousb");
@@ -428,5 +516,6 @@
     return pg;
   }
 
-  root.PODGOUSB = { connect: connect, MP: MP, snapshots56: snapshots56, text: text, CMD: CMD, K: K, APP: APP };
+  root.PODGOUSB = { connect: connect, MP: MP, snapshots56: snapshots56, snapshotList: snapshotList, setSnapshot: setSnapshot,
+                    COLOURS: COLOURS, NAME_MAX: NAME_MAX, text: text, CMD: CMD, K: K, APP: APP };
 })(typeof self !== "undefined" ? self : this);

@@ -62,6 +62,11 @@ select { font: 15px var(--body); padding: 10px; border-radius: 8px; border: 1px 
 label.f { display: grid; gap: 4px; font-size: 14px; color: var(--muted); min-width: 0; }
 .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; align-items: end; }
 .danger { border-color: var(--bad); background: transparent; color: var(--bad); }
+.snaps { display: grid; gap: 8px; }
+.snap { display: grid; grid-template-columns: 34px minmax(0, 1fr) minmax(120px, 170px); gap: 10px; align-items: center; }
+.snap .n { font: 700 16px var(--display); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--rule); }
+.snap input { font: 15px var(--body); padding: 9px 10px; border-radius: 8px; border: 1px solid var(--rule); background: var(--bg); color: var(--ink); min-width: 0; text-transform: none; }
+.snap.off { opacity: 0.5; }
 </style>
 </head>
 <body>
@@ -135,10 +140,26 @@ label.f { display: grid; gap: 4px; font-size: 14px; color: var(--muted); min-wid
     </div>
   </section>
 
+  <section aria-labelledby="sn">
+    <h2 id="sn">4. Snapshot names and colours</h2>
+    <div class="panel">
+      <p>Rename the snapshots of a preset and pick each one's footswitch LED colour, then save it on the POD Go. Snapshots 5 and 6 show when the preset uses them (six-snapshot firmware).</p>
+      <div class="pair">
+        <label class="f">Preset<select id="snpreset"></select></label>
+        <div><button id="snload" type="button" disabled>Load its snapshots</button></div>
+      </div>
+      <div class="snaps" id="snaps" hidden></div>
+      <div class="row" id="snbar" hidden>
+        <button id="snsave" type="button">Save to the POD Go</button>
+        <button id="snrevert" class="ghost" type="button">Undo changes</button>
+      </div>
+      <div class="status" id="snstatus"></div>
+    </div>
+  </section>
+
   <section aria-labelledby="next">
     <h2 id="next">Coming next</h2>
     <ul>
-      <li><b>Snapshot names and LED colours</b> for snapshots 1 to 6.</li>
       <li><b>Patch editing</b>: blocks and parameters.</li>
     </ul>
   </section>
@@ -151,7 +172,9 @@ label.f { display: grid; gap: 4px; font-size: 14px; color: var(--muted); min-wid
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
-  var P = window.PODGOUSB, pg = null, stopping = false, url = null, backup = null, unitNames = [], setlist = null, busy = false;
+  var P = window.PODGOUSB, pg = null, stopping = false, url = null, backup = null, unitNames = [], setlist = null, busy = false, curPreset = null;
+  var SWATCH = ["transparent", "#ffffff", "#e53935", "#e65100", "#ffa726", "#fdd835", "#43a047", "#26c6da", "#1e88e5", "#8e24aa", "#ec407a", "#3a3f42"];
+  var snap = null;   // { slot, name, blob, list }
   function log(t) { $("log").textContent += t + "\n"; }
   function status(el, cls, b, rest) {
     el.className = "status" + (cls ? " " + cls : "");
@@ -175,9 +198,14 @@ label.f { display: grid; gap: 4px; font-size: 14px; color: var(--muted); min-wid
       to.appendChild(o);
     }
     if (keep !== "") to.value = keep;
+    var sp = $("snpreset"), sk = sp.value;
+    sp.textContent = "";
+    unitNames.forEach(function (nm, i) { var o = document.createElement("option"); o.value = i; o.textContent = (i + 1) + ": " + nm; sp.appendChild(o); });
+    if (sk !== "") sp.value = sk; else if (curPreset !== null) sp.value = curPreset;
+    $("snload").disabled = !(pg && !busy);
   }
   async function loadNames() {
-    var cur = await pg.current(); setlist = cur.setlist;
+    var cur = await pg.current(); setlist = cur.setlist; curPreset = cur.preset;
     unitNames = (await pg.presetList(setlist)).map(function (p) { return p.name; });
     $("dev").textContent = "Setlist " + cur.setlist + " · preset " + (cur.preset + 1) + ": " + cur.name;
     refreshRestore();
@@ -320,6 +348,62 @@ label.f { display: grid; gap: 4px; font-size: 14px; color: var(--muted); min-wid
       await pg.restore(slot, p.blob, p.name, start.setlist);
       if (start.preset !== slot) await pg.select(start.preset, start.setlist);
       status($("rstatus"), "ok", "Restored.", "Slot " + (slot + 1) + " is now " + p.name + (P.snapshots56(p.blob) ? ", with snapshots 5 and 6." : "."));
+    });
+  });
+
+  // ---- snapshot names and colours
+  function drawSnaps() {
+    var box = $("snaps"); box.textContent = "";
+    snap.list.snapshots.forEach(function (sn) {
+      var row = document.createElement("div"); row.className = "snap";
+      var n = document.createElement("div"); n.className = "n"; n.textContent = sn.snapshot;
+      var inp = document.createElement("input"); inp.maxLength = P.NAME_MAX; inp.value = sn.name; inp.setAttribute("aria-label", "Snapshot " + sn.snapshot + " name");
+      var sel = document.createElement("select"); sel.setAttribute("aria-label", "Snapshot " + sn.snapshot + " LED colour");
+      P.COLOURS.forEach(function (c, i) { var o = document.createElement("option"); o.value = i; o.textContent = c; sel.appendChild(o); });
+      sel.value = sn.colour;
+      function paint() { var c = Number(sel.value); n.style.borderColor = c === 0 ? "var(--rule)" : SWATCH[c]; row.classList.toggle("off", c === 11); }
+      sel.addEventListener("change", paint); paint();
+      inp.dataset.snapshot = sel.dataset.snapshot = sn.snapshot;
+      inp.dataset.orig = sn.name; sel.dataset.orig = sn.colour;
+      row.appendChild(n); row.appendChild(inp); row.appendChild(sel); box.appendChild(row);
+    });
+    if (!snap.list.has56) {
+      var note = document.createElement("p"); note.className = "status";
+      note.textContent = "This preset doesn't carry snapshots 5 and 6 (not set up in it, or the POD Go runs firmware without companion support).";
+      box.appendChild(note);
+    }
+    box.hidden = false; $("snbar").hidden = false;
+  }
+  async function loadSnaps(slot) {
+    await pg.select(slot, setlist);
+    var blob = await pg.readPreset(true);
+    snap = { slot: slot, name: unitNames[slot], blob: blob, list: P.snapshotList(blob) };
+    drawSnaps();
+  }
+  $("snload").addEventListener("click", function () {
+    var slot = Number($("snpreset").value);
+    guard(async function () {
+      status($("snstatus"), "", "Loading\u2026", unitNames[slot]);
+      await loadSnaps(slot);
+      status($("snstatus"), "", "", "Preset " + (slot + 1) + ": " + unitNames[slot] + ". It's now loaded on the POD Go.");
+    });
+  });
+  $("snrevert").addEventListener("click", function () { if (snap) drawSnaps(); status($("snstatus"), "", "", "Changes undone."); });
+  $("snsave").addEventListener("click", function () {
+    if (!snap) return;
+    var blob = snap.blob, changed = 0;
+    document.querySelectorAll("#snaps .snap").forEach(function (row) {
+      var inp = row.querySelector("input"), sel = row.querySelector("select"), n = Number(inp.dataset.snapshot);
+      var nm = inp.value.trim() !== inp.dataset.orig ? inp.value.trim() : null, col = sel.value !== String(sel.dataset.orig) ? Number(sel.value) : null;
+      if (nm !== null || col !== null) { blob = P.setSnapshot(blob, n, nm, col); changed++; }
+    });
+    if (!changed) { status($("snstatus"), "", "Nothing changed.", ""); return; }
+    guard(async function () {
+      status($("snstatus"), "", "Saving\u2026", changed + " snapshot" + (changed > 1 ? "s" : ""));
+      await pg.writeEditBuffer(blob);
+      await pg.saveAs(snap.slot, snap.name, setlist);
+      await loadSnaps(snap.slot);
+      status($("snstatus"), "ok", "Saved.", "Preset " + (snap.slot + 1) + ": " + changed + " snapshot" + (changed > 1 ? "s" : "") + " updated on the POD Go.");
     });
   });
 
