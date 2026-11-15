@@ -45,8 +45,8 @@ EDITION = {'Splash': ('overlay', os.path.join(ROOT, 'art', 'nam-a2-edition', 'wi
 
 
 # --snapshots6 (experimental, podgo/snapshots6.py): {(edition, names): MD5}
-BUILT_MD5_SNAP6 = {(False, False): '2aaa7a361f804bb21074a8fed73ec6b7', (True, False): '6218d93a056a2e33a94afddd84d3485d',
-                   (False, True): '4781124ccc37a38580d08257498330f5', (True, True): '240fd8c66361564c2b38ab44f34809b7'}
+BUILT_MD5_SNAP6 = {(False, False): '61c901e7ef19af5881aeaa9830918038', (True, False): 'd66c946dd851bceb897888ffac9cf2e3',
+                   (False, True): '2326e4d52ee3b2b097b24b1c40850fb5', (True, True): '0a9d63e4b0b94e0ae38f01df37c66692'}
 
 
 def pinned_md5(edition, names, snap6=False):

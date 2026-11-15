@@ -39,7 +39,7 @@ HOOKS = ('sel_hook', 'reset_hook', 'st_feac', 'st_fa6c', 'ser_hook', 'des_hook',
          'wrap_7944', 'wrap_8040', 'wrap_8240', 'wrap_84a8',
          'fs_hook', 'draw_hook', 'cur_virt', 'vname', 'mask_stub', 'rec_hook', 'idx_hook', 'open_hook',
          'sh_fs', 'sh_x', 'sh_y', 'sh_tx', 'sh_ty', 'sh_img', 'sh_snap', 'sh_c2t', 'sh_sel',
-         'cur_true', 'vcolor', 'sh_led', 'icon_n', 'icon_r')
+         'cur_true', 'vcolor', 'sh_led', 'icon_n', 'icon_r', 'app_dec', 'app_rd')
 IMG_DIR = os.path.join(ROOT, 'build', 'snap6_img')   # tile images from the user's firmware (snap6_ui.py)
 # step (c): b.w / bl to a hook {address: (symbol, stock bytes, bl?)}
 UI_JUMPS = {0x28cae5bc: ('fs_hook', 'f0b50c46', False),    # footswitch events
@@ -66,6 +66,9 @@ UI_POOLS = {0x28c9a9e8: ('sh_y', 0x28ce11f4), 0x28c9aa00: ('sh_x', 0x28ce11dc), 
             0x28c9bca0: ('icon_n', 0x280110a4), 0x28c9bca4: ('icon_r', 0x280110b4),
             0x28c9bffc: ('icon_n', 0x280110a4), 0x28c9c654: ('icon_n', 0x280110c4),
             0x28c9c658: ('icon_r', 0x280110d4), 0x28c9cb60: ('icon_n', 0x280110c4)}
+# the companion app: editor command 0x16's registration literals {address: (symbol, stock Thumb pointer)}
+APP_PTRS = {0x28c8d068: ('app_rd', 0x28c8b1a1),        # its handler
+            0x28c8d06c: ('app_dec', 0x28c88821)}       # its parameter decoder (stock: return 0)
 SELECT, RESET, CC69_CMP = 0x28cb88a4, 0x28cb7878, 0x28cb6496
 SER, DES = 0x28cb916c, 0x28cb984c                       # snapshot section writer / reader
 SAVE0, SAVE1 = 0x28c9604a, 0x28c96176                   # bl 0x28c8feac / bl 0x28c8fa6c: preset to the store
@@ -74,10 +77,11 @@ MIRROR = {0x28cb7944: ('wrap_7944', '2de9f047'), 0x28cb8040: ('wrap_8040', '2de9
 STOCK = {SELECT: '2de9f04f', RESET: '2de9f043', CC69_CMP: '032c', SER: '2de9f04f', DES: '2de9f04f',
          **{va: b for va, (_, b) in MIRROR.items()}, **{va: b for va, (_, b, _) in UI_JUMPS.items()},
          **{va: struct.pack('<I', w).hex() for va, (_, w) in UI_POOLS.items()},
-         **{va: a for va, (a, _) in UI_BYTES.items()}}
+         **{va: a for va, (a, _) in UI_BYTES.items()},
+         **{va: struct.pack('<I', w).hex() for va, (_, w) in APP_PTRS.items()}}
 STOCK_MD5 = 'e0ea3e1ed32f0f353b79f6ad39631838'
 OUT_NAME = 'POD_Go_v2.50.0_Snap6.hxf'                   # six snapshots on stock, nothing else (the page's "only" choice)
-BUILT_MD5 = '5e198d45369daa22f5866d5632e5c827'                                      # that build's .hxf: web/pod-go/firmware-worker.js compares
+BUILT_MD5 = 'd4fde819f6a64a74e51c0d0f03187975'                                      # that build's .hxf: web/pod-go/firmware-worker.js compares
 
 
 def assemble(stock, debug=True):
@@ -158,6 +162,8 @@ def entry0(e0, code, SYMS, log=print):
         struct.pack_into('<I', e0, fo(va), SYMS[sym])
     for va, (_, b) in UI_BYTES.items():
         e0[fo(va): fo(va) + len(b) // 2] = bytes.fromhex(b)
+    for va, (sym, _) in APP_PTRS.items():
+        struct.pack_into('<I', e0, fo(va), SYMS[sym] | 1)
     pad = CAVE_VA - (dst + slen)
     out = e0[:nxt] + b'\x00' * pad + code
     out += b'\x00' * ((-len(out)) & 3)

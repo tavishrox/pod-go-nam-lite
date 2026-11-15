@@ -415,6 +415,58 @@ orig_ser:
         push.w  {r4-r11, lr}            @ the stock first instruction
         ldr.w   pc, =SER_BODY + 1
 
+@ companion app (docs/research/COMPANION_APP.md): the editor read, command 0x16, carries key 14 (snapshots
+@ 5 and 6, as a save writes them) when the request's parameters are exactly {0x7a: 1}. POD Go Edit sends no
+@ parameters, so its reads stay stock. app_dec replaces the command's parameter decoder (stock: return 0,
+@ parameters ignored); app_rd wraps its handler and sets the "storing" flag (state+4) for that one read.
+        .equ RD_HANDLER,  0x28c8b1a0
+        .thumb_func
+        .type app_dec, %function
+app_dec:                                @ r1 = {buf, end, offset of the parameter value}
+        ldr     r2, [r1]
+        ldr     r3, [r1, #8]
+        ldr     r0, [r1, #4]
+        add     r2, r2, r3
+        adds    r3, #3
+        cmp     r3, r0
+        bhi     1f
+        ldrb    r3, [r2]
+        cmp     r3, #0x81               @ fixmap(1)
+        bne     1f
+        ldrb    r3, [r2, #1]
+        cmp     r3, #0x7a
+        bne     1f
+        ldrb    r3, [r2, #2]
+        cmp     r3, #1
+        bne     1f
+        movs    r0, #1
+        b       2f
+1:      movs    r0, #0
+2:      ldr     r3, =state
+        strb    r0, [r3, #5]
+        movs    r0, #0
+        bx      lr
+
+        .thumb_func
+        .type app_rd, %function
+app_rd:
+        ldr     r3, =state
+        ldrb    ip, [r3, #5]
+        cmp     ip, #0
+        beq     9f
+        push    {r4, lr}
+        mov     r4, r3
+        movs    ip, #0
+        strb    ip, [r4, #5]
+        movs    ip, #1
+        strb    ip, [r4, #4]
+        ldr     ip, =RD_HANDLER + 1
+        blx     ip
+        movs    r3, #0
+        strb    r3, [r4, #4]
+        pop     {r4, pc}
+9:      ldr.w   pc, =RD_HANDLER + 1
+
 @ deserializer 0x28cb984c(mgr, buf, len): it resets the manager (reset_hook empties the store) first,
 @ so the store is filled after it returns.
         .thumb_func
@@ -1102,7 +1154,8 @@ names:  .asciz  "SNAPSHOT 5\0"
 
         .align  2
 state:  .byte   0, 0, 0, 0              @ holder, valid[3]
-        .byte   0, 0, 0, 0              @ storing (set while a preset is written to the unit's store)
+        .byte   0, 0, 0, 0              @ storing (set while a preset is written to the unit's store);
+                                        @ +5: the companion app asked for key 14 on the next read
         .align  2
 dbg:    .space  128                     @ DEBUG (test builds): see dbg_emit
         .align  2

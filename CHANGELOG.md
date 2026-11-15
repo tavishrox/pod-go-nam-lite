@@ -13,10 +13,14 @@ Major changes, newest first. The repository has no version numbers, so each entr
   `podgo/snap6_ui.py`, which draws the tiles and icons from the user's own firmware at build time: no Line 6
   artwork in the repository. Notes: `docs/research/SNAPSHOTS_6.md`.
 - Installed on a POD Go Wireless (ToneShift Edition with names and six snapshots): six-snapshot screen, LEDs,
-  switches, MIDI, save and reload, and a power-cycle all passed. MD5s 2aaa7a36 (Elektrik), 6218d93a (Edition),
-  4781124c (names), 240fd8c6 (Edition and names).
+  switches, MIDI, save and reload, and a power-cycle all passed.
+- Companion-app access (for a coming WebUSB page): an editor read (command 0x16) sent with the parameters
+  {0x7a: 1} carries snapshots 5 and 6 (key 14, as saved); POD Go Edit sends none, so its reads stay stock. A
+  preset sent back with set edit buffer (0x15) puts them back. Ran on a POD Go Wireless from RAM: read with and
+  without the marker, snapshot 5 renamed from the computer and shown on the unit (`podgo/snap6/app_probe.py`).
+  MD5s 61c901e7 (Elektrik), d66c946d (Edition), 2326e4d5 (names), 0a9d63e4 (Edition and names).
 - **Six snapshots only**: a choice at the top of the builder (or `podgo/snapshots6.py` alone) for stock 2.50 with
-  six snapshots and nothing else, MD5 5e198d45 (ran on a POD Go Wireless from RAM, with POD Go Edit).
+  six snapshots and nothing else, MD5 d4fde819 (the same six-snapshot code as the builds above).
 - Setup page: hidden boxes now hide (the boot-screen preview showed even when its option was off).
 
 ## 2026-11-11: NAM FX Loop template
