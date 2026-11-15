@@ -29,11 +29,11 @@ var OUT_NAME_EDITION = "POD_Go_v2.50.0_NAM_A2_Lite_ToneShift_Edition.hxf";
 var BUILT_MD5_NAMES = "2cb121444bfe5e4a9259903b7ea2dc83";
 var BUILT_MD5_EDITION_NAMES = "0b27b025a84fc4a6d7af77f72f85d5ea";
 // --snapshots6: "edition,names" -> MD5 (build_podgo.BUILT_MD5_SNAP6)
-var BUILT_MD5_SNAP6 = {"false,false": "3daac1fc3cdfd6ce938d367c5d1a391c", "true,false": "35440ae5402388ae82cbfd0d1be4192b",
-  "false,true": "cebcb922b533c756b39ae9ed32af6938", "true,true": "281b38bba367d05b4e0913e002b637df"};
+var BUILT_MD5_SNAP6 = {"false,false": "07c56e5a59181113d9c2c210d88a7d24", "true,false": "3011fce6798ebb916109434415014000",
+  "false,true": "8ec7f3f0fb7560d6645e75a39b81f2ee", "true,true": "22d63d133a9335f8dcd1078fe4c27f40"};
 // six snapshots only: podgo/snapshots6.py's OUT_NAME and BUILT_MD5
 var OUT_NAME_ONLY6 = "POD_Go_v2.50.0_Snap6.hxf";
-var BUILT_MD5_ONLY6 = "24cadf327102fae35c12e5133180e715";
+var BUILT_MD5_ONLY6 = "e96852fe987acd896ca16bddfc3ea868";
 var EDITION_SOURCES = ["podgo/splash.py", "art/nam-a2-edition/wired.png", "art/nam-a2-edition/wireless.png"];
 
 // What the build needs, relative to the repository root.

@@ -39,12 +39,13 @@ Major changes, newest first. The repository has no version numbers, so each entr
   without the marker, snapshot 5 renamed from the computer and shown on the unit (`podgo/snap6/app_probe.py`).
   MD5s 61c901e7 (Elektrik), d66c946d (Edition), 2326e4d5 (names), 0a9d63e4 (Edition and names).
 - **Coloured snapshot tiles** (four and six snapshots): a tile takes its snapshot's LED colour from Line 6's own
-  stomp tile palette (the images stomp mode uses for its blocks): full colour when idle, lighter with dark text
-  when active, white camera badge on colour; Auto stays stock. The tiles are drawn as the screen reads them from
+  stomp tile images, exactly as stomp mode shows a block of that colour: the deeper shade with white text and a
+  white camera when idle (as a bypassed block), the full colour with dark text when active (as an engaged
+  block); Auto stays stock. The tiles are drawn as the screen reads them from
   the badges and a colour table (`podgo/snap6_ui.py`, `snap6.s` `ff_tile`), so the six-snapshot images went from
   243 KB to 38 KB. Leaving six-snapshot mode puts snapshot 4 back in the fourth slot (unless that slot is
-  playing), so the four-snapshot view's 4 shows snapshot 4. Ran on a POD Go Wireless from RAM; MD5s 3daac1fc
-  (Elektrik), 35440ae5 (Edition), cebcb922 (names), 281b38bb (Edition and names), 24cadf32 (six only).
+  playing), so the four-snapshot view's 4 shows snapshot 4. Ran on a POD Go Wireless from RAM; MD5s 07c56e5a
+  (Elektrik), 3011fce6 (Edition), 8ec7f3f0 (names), 22d63d13 (Edition and names), e96852fe (six only).
 - **Six snapshots only**: a choice at the top of the builder (or `podgo/snapshots6.py` alone) for stock 2.50 with
   six snapshots and nothing else, MD5 d4fde819 (the same six-snapshot code as the builds above).
 - Setup page: hidden boxes now hide (the boot-screen preview showed even when its option was off).

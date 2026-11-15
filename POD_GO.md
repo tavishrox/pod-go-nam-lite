@@ -140,9 +140,9 @@ six-snapshot code as the NAM builds).
   **4 5 6** (Bank Up and Bank Down become 4 and 1). The screen shows six tiles, the LED rings follow and the
   top-right icon shows 5 and 6. Hold MODE again for the normal footswitches and banks.
 - MIDI CC69 values 4 and 5 select snapshots 5 and 6.
-- **Coloured tiles** (both views): each snapshot's tile takes its LED colour, as stomp mode colours its blocks
-  (Line 6's own tile colours): full colour when idle, lighter with dark text when active. Snapshots left on Auto
-  look stock.
+- **Coloured tiles** (both views): each snapshot's tile takes its LED colour exactly as stomp mode shows a block
+  of that colour: the deeper shade with white text when idle (as a bypassed block), the full colour with dark
+  text when active (as an engaged block). Snapshots left on Auto look stock.
 - **Saving:** 5 and 6 are saved inside the preset when you save on the POD Go, and survive a power-cycle. As
   with the stock snapshots, save while on each snapshot you change.
 

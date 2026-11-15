@@ -267,9 +267,10 @@ So: to copy or move a preset that uses 5 and 6, save it to the new slot on the u
   colour table entry for the snapshot's LED colour (`vcolor`, as the LEDs get it; 5 and 6 from the store), the
   badge where it sits (MARK pixels take the background). No caching problem seen: a colour change shows when the
   play screen is next drawn.
-- Look (owner's choice after a mock-up and a first try): as stomp mode, the full tile colour when idle with the
-  camera and number white, lighter (45% towards white; green toned down first) when active with the stock black
-  camera and the screen's dark text; Auto exactly stock; White mid grey / white; Off near black / grey.
+- Look (owner's choice after a mock-up, two tries and photos of stomp mode): exactly stomp mode's pair per colour.
+  Idle = `Play_<Colour>Off` (as a bypassed block: white text; the camera and number drawn white), active =
+  `Play_<Colour>` (as an engaged block: the screen's dark text, the stock black camera). Auto exactly stock;
+  White grey (Play_GrayOff) / white; Off near black / grey. The snapshot screen's own font stays.
 - Four-snapshot view: draw_hook points its four snapshot tiles at images 16-19 (174 px) and the selected ones at
   20-23, so it is coloured too.
 - Leaving six mode (MODE hold) now gives slot 4 back to snapshot 4 (`give_back`: slot 4 to the store, snapshot 4's

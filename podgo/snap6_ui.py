@@ -13,8 +13,9 @@ OUT_DIR gets recs.bin (48-byte Entry 7 style records), ents.bin ({size, offset} 
 
 Coloured tiles: the snapshot tiles aren't stored as pictures. tiles.bin holds each tile's description, the twelve
 camera badges (background pixels marked) and a colour table; snap6.s draws a tile as it is read, its background in
-the snapshot's LED colour, as stomp mode colours its blocks: Line 6's own tile colour when idle (as an engaged
-block), lighter when active (as the selected block; the screen draws its text dark), stock grey and white for Auto. Both footswitch views use them:
+the snapshot's LED colour exactly as stomp mode colours a block of that colour (Line 6's own two tile images per
+colour): the deeper "Off" shade with white text when idle, as a bypassed block; the full colour with dark text when
+active, as an engaged block (the screen draws the active snapshot's text dark); stock grey and white for Auto. Both footswitch views use them:
 154-px tiles for six snapshots, 174-px ones (stock width) for four. docs/research/SNAPSHOTS_6.md.
 """
 import os
@@ -129,8 +130,6 @@ NIMG = len(TILES)
 # LED colour (0 Auto, 1 White, 2 Red, 3 Dark Orange, 4 Light Orange, 5 Yellow, 6 Green, 7 Turquoise, 8 Blue,
 # 9 Violet, 10 Pink, 11 Off) -> Line 6's tile image of that colour (Play_<name> / Play_<name>Off)
 PALETTE = [None, 'Gray', 'Red', 'DarkOrange', 'LightOrange', 'Yellow', 'Green', 'Turquoise', 'Blue', 'Violet', 'Pink', None]
-LIFT = 0.45            # how far an active tile's colour goes towards white (the screen draws its text dark)
-LIFT_GREEN = (0.30, 0.30)   # green: first towards grey, then towards white (pure green lightened is neon)
 
 
 def _rgb(v):
@@ -149,18 +148,11 @@ def colours(get, idle_bg, sel_bg):
         if k == 0:
             out.append((idle_bg, sel_bg))                    # Auto: stock
         elif k == 1:
-            out.append((_565((140, 142, 146)), 0xffff))           # White: mid grey (white text), white
+            out.append((get('Play_GrayOff')[0][0, 0], 0xffff))   # White: grey (white text), white
         elif k == 11:
             out.append((_565((24, 24, 26)), get('Play_Gray')[0][0, 0]))   # Off: near black, grey
-        else:
-            on = get(f'Play_{name}')[0][0, 0]
-            c = _rgb(on)
-            if name == 'Green':
-                c = c + (128 - c) * LIFT_GREEN[0]
-                c = c + (255 - c) * LIFT_GREEN[1]
-            else:
-                c = c + (255 - c) * LIFT
-            out.append((on, _565(c)))
+        else:                                                 # as stomp mode: Play_<colour>Off / Play_<colour>
+            out.append((get(f'Play_{name}Off')[0][0, 0], get(f'Play_{name}')[0][0, 0]))
     return out
 
 
