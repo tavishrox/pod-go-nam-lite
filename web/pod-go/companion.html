@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>POD Go Companion</title>
-<meta name="description" content="Back up every POD Go preset from the browser, including snapshots 5 and 6 of the six-snapshot firmware.">
+<meta name="description" content="Back up and restore POD Go presets from the browser, including snapshots 5 and 6 of the six-snapshot firmware.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -58,6 +58,10 @@ td.num { font-family: var(--mono); color: var(--muted); }
 .tag.s6 { border-color: var(--accent); color: var(--accent); }
 details pre { margin: 8px 0 0; max-height: 240px; overflow: auto; font: 12px/1.5 var(--mono); background: var(--bg); border: 1px solid var(--rule); border-radius: 8px; padding: 10px; white-space: pre-wrap; }
 ul { margin: 0; padding-left: 20px; color: var(--muted); }
+select { font: 15px var(--body); padding: 10px; border-radius: 8px; border: 1px solid var(--rule); background: var(--bg); color: var(--ink); max-width: 100%; }
+label.f { display: grid; gap: 4px; font-size: 14px; color: var(--muted); min-width: 0; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; align-items: end; }
+.danger { border-color: var(--bad); background: transparent; color: var(--bad); }
 </style>
 </head>
 <body>
@@ -65,9 +69,9 @@ ul { margin: 0; padding-left: 20px; color: var(--muted); }
   <header>
     <div class="eyebrow">POD Go · POD Go Wireless · firmware 2.50 · experimental</div>
     <h1>POD Go Companion</h1>
-    <p class="lead">Back up every preset on your POD Go from the browser, including snapshots 5 and 6 when the unit runs the six-snapshot firmware.</p>
+    <p class="lead">Back up and restore the presets on your POD Go from the browser, including snapshots 5 and 6 when the unit runs the six-snapshot firmware.</p>
     <p class="note"><b>Before you connect.</b> Use <b>Chrome</b> or <b>Edge</b> on a computer and <b>quit POD Go Edit and Line 6 Updater</b>: only one program can talk to the POD Go at a time. A backup loads each preset on the unit in turn, so <b>save any changes on the POD Go first</b>: unsaved edits are lost when the next preset loads.</p>
-    <p class="note"><b>Unofficial and experimental.</b> Not made or supported by Line 6. It only reads from the POD Go for now; restore comes next. <a href="index.html">Back to the setup page</a>.</p>
+    <p class="note"><b>Unofficial and experimental.</b> Not made or supported by Line 6. Restoring overwrites presets on the POD Go: keep a backup you trust before you restore. <a href="index.html">Back to the setup page</a>.</p>
   </header>
 
   <section aria-labelledby="conn">
@@ -106,10 +110,34 @@ ul { margin: 0; padding-left: 20px; color: var(--muted); }
     </div>
   </section>
 
+  <section aria-labelledby="rs">
+    <h2 id="rs">3. Restore</h2>
+    <div class="panel">
+      <p>Open a backup file made on this page, then put one preset back into any slot, or restore the whole backup. Each restored preset is saved on the POD Go, snapshots 5 and 6 included.</p>
+      <div class="row">
+        <label class="btn ghost" for="file" tabindex="0">Open a backup file…</label>
+        <input type="file" id="file" accept=".podgobackup" hidden>
+      </div>
+      <div class="status" id="filestatus"></div>
+      <div id="restoreui" hidden>
+        <div class="pair">
+          <label class="f">Preset from the backup<select id="from"></select></label>
+          <label class="f">Into slot on the POD Go<select id="to"></select></label>
+          <div><button id="one" type="button" disabled>Restore this preset</button></div>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <button id="all" class="danger" type="button" disabled>Restore the whole backup…</button>
+          <button id="rstop" class="ghost" type="button" hidden>Stop</button>
+        </div>
+        <progress id="rprog" max="1" value="0" hidden></progress>
+        <div class="status" id="rstatus"></div>
+      </div>
+    </div>
+  </section>
+
   <section aria-labelledby="next">
     <h2 id="next">Coming next</h2>
     <ul>
-      <li><b>Restore</b> one preset or a whole backup, snapshots 5 and 6 included.</li>
       <li><b>Snapshot names and LED colours</b> for snapshots 1 to 6.</li>
       <li><b>Patch editing</b>: blocks and parameters.</li>
     </ul>
@@ -123,7 +151,7 @@ ul { margin: 0; padding-left: 20px; color: var(--muted); }
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
-  var P = window.PODGOUSB, pg = null, stopping = false, url = null;
+  var P = window.PODGOUSB, pg = null, stopping = false, url = null, backup = null, unitNames = [], setlist = null, busy = false;
   function log(t) { $("log").textContent += t + "\n"; }
   function status(el, cls, b, rest) {
     el.className = "status" + (cls ? " " + cls : "");
@@ -133,6 +161,27 @@ ul { margin: 0; padding-left: 20px; color: var(--muted); }
   }
   function connected(on) {
     $("connect").hidden = on; $("disconnect").hidden = !on; $("backup").disabled = !on; $("dev").hidden = !on;
+    refreshRestore();
+  }
+  function refreshRestore() {
+    var ok = !!(pg && backup && !busy);
+    $("one").disabled = !ok; $("all").disabled = !ok;
+    var to = $("to"), keep = to.value;
+    to.textContent = "";
+    var n = Math.max(unitNames.length, backup ? backup.presets.length : 0, 128);
+    for (var i = 0; i < n; i++) {
+      var o = document.createElement("option"); o.value = i;
+      o.textContent = (i + 1) + (unitNames[i] !== undefined ? ": " + unitNames[i] : "");
+      to.appendChild(o);
+    }
+    if (keep !== "") to.value = keep;
+  }
+  async function loadNames() {
+    var cur = await pg.current(); setlist = cur.setlist;
+    unitNames = (await pg.presetList(setlist)).map(function (p) { return p.name; });
+    $("dev").textContent = "Setlist " + cur.setlist + " · preset " + (cur.preset + 1) + ": " + cur.name;
+    refreshRestore();
+    return cur;
   }
   function errText(e) {
     if (e && e.name === "NotFoundError") return "No device chosen.";
@@ -149,10 +198,9 @@ ul { margin: 0; padding-left: 20px; color: var(--muted); }
     status($("status"), "", "Connecting…", "Pick the POD Go in the browser's list.");
     try {
       pg = await P.connect(navigator.usb, { log: log });
-      var cur = await pg.current();
       connected(true);
+      var cur = await loadNames();
       status($("status"), "ok", "Connected.", "");
-      $("dev").textContent = "Setlist " + cur.setlist + " · preset " + (cur.preset + 1) + ": " + cur.name;
       log("connected; current " + JSON.stringify(cur));
     } catch (e) {
       log("connect: " + errText(e));
@@ -168,6 +216,7 @@ ul { margin: 0; padding-left: 20px; color: var(--muted); }
   });
 
   $("stop").addEventListener("click", function () { stopping = true; $("stop").disabled = true; });
+  $("rstop").addEventListener("click", function () { stopping = true; $("rstop").disabled = true; });
 
   function row(i, name, size, s56) {
     var tr = document.createElement("tr");
@@ -221,6 +270,75 @@ ul { margin: 0; padding-left: 20px; color: var(--muted); }
       status($("bkstatus"), "bad", "The backup stopped.", errText(e) + (presets.length ? " " + presets.length + " presets were read." : ""));
     }
     $("stop").hidden = true; $("backup").disabled = !pg; $("disconnect").disabled = false;
+  });
+
+  // ---- restore
+  $("file").addEventListener("change", async function () {
+    var f = this.files[0]; this.value = "";
+    if (!f) return;
+    try {
+      var m = P.MP.decode(new Uint8Array(await f.arrayBuffer()));
+      if (!(m instanceof Map) || P.text(m.get("format") || new Uint8Array(0)) !== "podgo-companion-backup") throw new Error("not a backup made on this page");
+      var presets = m.get("presets").map(function (p) { return { index: p.get("index"), name: P.text(p.get("name")), blob: p.get("blob") }; });
+      backup = { created: P.text(m.get("created") || new Uint8Array(0)), presets: presets };
+      var with56 = presets.filter(function (p) { return P.snapshots56(p.blob); }).length;
+      var from = $("from"); from.textContent = "";
+      presets.forEach(function (p, k) {
+        var o = document.createElement("option"); o.value = k;
+        o.textContent = (p.index + 1) + ": " + p.name + (P.snapshots56(p.blob) ? "  (5·6)" : "");
+        from.appendChild(o);
+      });
+      from.onchange = function () { $("to").value = presets[from.value].index; };
+      $("to").value = presets[0] ? presets[0].index : 0;
+      $("restoreui").hidden = false;
+      status($("filestatus"), "ok", f.name + ":", presets.length + " presets, " + with56 + " with snapshots 5 and 6" + (backup.created ? ", made " + backup.created.slice(0, 10) : "") + ".");
+      refreshRestore();
+      if (!pg) status($("rstatus"), "", "Connect to the POD Go to restore.", "");
+    } catch (e) {
+      backup = null; $("restoreui").hidden = true;
+      status($("filestatus"), "bad", "That file can't be used.", errText(e));
+    }
+  });
+  $("file").previousElementSibling && document.querySelector('label[for="file"]').addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("file").click(); }
+  });
+
+  async function guard(fn) {
+    busy = true; refreshRestore(); $("backup").disabled = true; $("disconnect").disabled = true;
+    try { await fn(); } catch (e) { log("restore: " + errText(e)); status($("rstatus"), "bad", "The restore stopped.", errText(e)); }
+    busy = false; refreshRestore(); $("backup").disabled = !pg; $("disconnect").disabled = false;
+    try { if (pg) await loadNames(); } catch (e) { /* */ }
+  }
+
+  $("one").addEventListener("click", function () {
+    var p = backup.presets[$("from").value], slot = Number($("to").value);
+    var now = unitNames[slot] !== undefined ? "\u201c" + unitNames[slot] + "\u201d" : "the preset there";
+    if (!confirm("Replace slot " + (slot + 1) + " (" + now + ") on the POD Go with \u201c" + p.name + "\u201d from the backup? The slot's current preset is overwritten.")) return;
+    guard(async function () {
+      var start = await pg.current();
+      status($("rstatus"), "", "Restoring\u2026", p.name + " into slot " + (slot + 1));
+      await pg.restore(slot, p.blob, p.name, start.setlist);
+      if (start.preset !== slot) await pg.select(start.preset, start.setlist);
+      status($("rstatus"), "ok", "Restored.", "Slot " + (slot + 1) + " is now " + p.name + (P.snapshots56(p.blob) ? ", with snapshots 5 and 6." : "."));
+    });
+  });
+
+  $("all").addEventListener("click", function () {
+    var n = backup.presets.length;
+    if (!confirm("Restore the whole backup? All " + n + " presets it holds are written back to their slots on the POD Go, replacing what is there now. This can't be undone, except by restoring another backup.")) return;
+    guard(async function () {
+      stopping = false; $("rstop").hidden = false; $("rstop").disabled = false; $("rprog").hidden = false; $("rprog").value = 0;
+      var start = await pg.current(), done = 0;
+      for (var k = 0; k < n && !stopping; k++) {
+        var p = backup.presets[k];
+        status($("rstatus"), "", "Restoring " + (k + 1) + " of " + n + ":", p.name);
+        await pg.restore(p.index, p.blob, p.name, start.setlist);
+        done++; $("rprog").value = (k + 1) / n;
+      }
+      await pg.select(start.preset, start.setlist);
+      $("rstop").hidden = true;
+      status($("rstatus"), stopping ? "" : "ok", stopping ? "Stopped." : "Backup restored.", done + " of " + n + " presets written back.");
+    });
   });
 })();
 </script>

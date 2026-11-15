@@ -70,3 +70,15 @@ event 4 (fallback 0.5 s) instead of fixed delays: a full setlist in about a minu
 On the unit (RAM, companion build), in Chrome: backup completed, presets with snapshots 5 and 6 marked.
 With the installed (older) six-snapshot build the same backup completes without 5 and 6 (the marker is
 ignored); the page says so.
+
+## Restore (2026-11-15)
+
+Save as: editor command **0x46** {0x6b setlist, 0x6c slot, 0x6d name} saves the edit buffer to that slot under
+that name (decoder 0x28c88469 also defaults all three to the current preset; 0x45 saves keeping the slot's
+name; handler 0x28c8ac74). Restore = load the slot (0x14), set edit buffer (0x15) with the backed-up blob,
+save as (0x46). Tried with hx_ctl first (RAM run, writes in memory): NAM Essentials copied into slot 128 as
+"RESTORE TEST", reloaded with its snapshot 5/6 records, the new name in the preset list. Then from the page in
+Chrome: a preset restored from the backup file, 5 and 6 on the unit.
+
+Backup files are MessagePack with string keys; the page's decoder returns string keys as strings (the first
+try rejected every file).

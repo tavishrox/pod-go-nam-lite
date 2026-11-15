@@ -7,6 +7,7 @@
 //   await pg.select(preset)     (loads it on the unit: unsaved edits there are lost)
 //   await pg.readPreset(true)   -> Uint8Array l6-helix blob; true asks for snapshots 5 and 6 (key 14) too
 //   await pg.writeEditBuffer(blob)   (the unit's edit buffer only: nothing saved)
+//   await pg.restore(slot, blob, name, setlist)   writes blob into that slot and saves it (overwrites the slot)
 //   await pg.close()
 //
 // Wire format (hx_dfu_reboot.py's notes): one message per OUT transfer, padded to 4 bytes; transport header
@@ -26,9 +27,12 @@
       NOTIFY = { local: 0x1002, remote: 0x03F0, svc: 4 };
   var K = { SEQ: 0x66, CMD: 0x64, PARAMS: 0x65, STATUS: 0x67, RESULT: 0x68, ERR: 0x6F,
             SETLIST: 0x6B, PRESET: 0x6C, NAME: 0x6D, PBLOB: 0x6E };
-  var CMD = { LOAD: 0x14, SET_EDITBUF: 0x15, GET_EDITBUF: 0x16, CURRENT: 0x17, LIB_LIST: 0x01 };
+  // SAVE_AS 0x46: save the edit buffer to {0x6b setlist, 0x6c slot, 0x6d name} (0x45 keeps the slot's name);
+  // the unit's own save path, so snapshots 5 and 6 in the buffer are written too (docs/research/COMPANION_APP.md).
+  var CMD = { LOAD: 0x14, SET_EDITBUF: 0x15, GET_EDITBUF: 0x16, CURRENT: 0x17, SAVE_AS: 0x46, LIB_LIST: 0x01 };
   var APP = { 0x7a: 1 };   // the six-snapshot firmware's marker: the read carries key 14 (snapshots 5 and 6)
 
+  var PENDING = { pending: true };   // a request the unit accepted and completes later (status 1)
   function fail(text, code) { var e = new Error(text); e.code = code || "usb"; return e; }
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
   function concat(parts) {
@@ -122,7 +126,15 @@
     throw fail("MessagePack: type 0x" + t.toString(16) + " at " + p);
     function raw(n, q) { if (q + n > b.length) throw fail("MessagePack: truncated"); return [b.slice(q, q + n), q + n]; }
     function arr(n, q) { var a = []; for (var i = 0; i < n; i++) { var r = dec(b, q); a.push(r[0]); q = r[1]; } return [a, q]; }
-    function map(n, q) { var m = new Map(); for (var i = 0; i < n; i++) { var k = dec(b, q), v = dec(b, k[1]); m.set(k[0], v[0]); q = v[1]; } return [m, q]; }
+    function map(n, q) {      // string keys (the backup file's) come back as JavaScript strings; values stay bytes
+      var m = new Map();
+      for (var i = 0; i < n; i++) {
+        var k = dec(b, q), v = dec(b, k[1]);
+        m.set(k[0] instanceof Uint8Array ? new TextDecoder().decode(k[0]) : k[0], v[0]);
+        q = v[1];
+      }
+      return [m, q];
+    }
   }
 
   // ---- the USB link: one IN reader, messages routed to their stream
@@ -282,7 +294,7 @@
     v.setUint16(0, 1, true); v.setUint16(2, this.svc, true); v.setUint32(4, body.length, true);
     await this.writeMsg(concat([hdr, body]), ms);
     var rep = MP.decode((await this.readMsg(ms)).body);
-    if (rep.get(K.STATUS) === 1) return null;      // accepted, completes later (announced on the notify stream)
+    if (rep.get(K.STATUS) === 1) return PENDING;   // accepted, completes later (announced on the notify stream)
     if (rep.get(K.STATUS) !== 0) {
       var res = rep.get(K.RESULT), err = res instanceof Map ? res.get(K.ERR) : null;
       throw fail("command 0x" + cmd.toString(16) + " refused (status " + rep.get(K.STATUS) + ", error " + err + ")");
@@ -354,8 +366,22 @@
   };
   PodGo.prototype.writeEditBuffer = async function (blob) {
     if (text(blob.slice(1, 9)) !== "l6-helix") throw fail("that isn't a POD Go preset");
-    await this.ed.request(CMD.SET_EDITBUF, new Map([[K.PBLOB, blob]]), 10000);
-    await this.settle(1000);
+    var done = this.event(20, 4000);                 // the request's completion, if it completes later
+    if (await this.ed.request(CMD.SET_EDITBUF, new Map([[K.PBLOB, blob]]), 10000) === PENDING) await done;
+    await this.settle(150);
+  };
+  PodGo.prototype.saveAs = async function (slot, name, setlist) {
+    if (setlist === undefined) setlist = (await this.current()).setlist;
+    var nm = new TextEncoder().encode(String(name).slice(0, 16));
+    var done = this.event(20, 6000);
+    if (await this.ed.request(CMD.SAVE_AS, new Map([[K.SETLIST, setlist], [K.PRESET, slot], [K.NAME, concat([nm, Uint8Array.of(0)])]]), 15000) === PENDING) await done;
+    await this.settle(150);
+  };
+  PodGo.prototype.restore = async function (slot, blob, name, setlist) {
+    if (setlist === undefined) setlist = (await this.current()).setlist;
+    await this.select(slot, setlist);                // the slot being restored is the current preset
+    await this.writeEditBuffer(blob);
+    await this.saveAs(slot, name, setlist);
   };
   PodGo.prototype.close = async function () {
     for (var c of [this.lib, this.nf, this.ed]) if (c) await c.st.fin();
