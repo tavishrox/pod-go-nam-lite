@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
-"""Six snapshots, steps (a)+(b): a test build where MIDI CC69 values 4 and 5 select snapshots 5 and 6,
-and saving a preset on the unit keeps them.
+"""Six snapshots for the POD Go 2.50: hold MODE for a six-snapshot footswitch mode (bottom row 1 2 3, top row
+4 5 6, Bank Up/Down as snapshot switches), with snapshots 5 and 6 saved inside the preset (build_podgo.py
+--snapshots6, or on its own here).
 
-    python3 podgo/snapshots6.py POD_Go_v2.50.0_0x6e984472.hxf [-o build/POD_Go_v2.50.0_Snap6_test.hxf]
+    python3 podgo/snapshots6.py POD_Go_v2.50.0_0x6e984472.hxf [-o OUT.hxf] [--base RELEASE.hxf] [--debug]
+    python3 podgo/snapshots6.py STOCK.hxf --update-code     re-assemble the committed code (podgo/snap6/)
 
-Stock 2.50 plus podgo/snap6/snap6.s (how it works, and what it doesn't do yet): its code and store are
-appended to the application's code segment at 0x28ce4100 (after --model-names's cave, so both can go in
-one build), and the stock code is changed in the places listed below (STOCK). Nothing else differs from stock. Run it from
-RAM (tools/hxf_ram.py run ... --writes ram): nothing is written to the unit. docs/research/SNAPSHOTS_6.md.
+The code (podgo/snap6/snap6.s) is committed assembled (podgo/snap6/snap6_code.bin, snap6_syms.json: no Line 6
+artwork, so the web page needs no assembler); its tile and icon images are drawn at build time from the
+firmware file given (snap6_ui.py) and appended. Code, store and images go after the application's code segment
+at 0x28ce4100 (after --model-names's cave, so both can go in one build), and the stock code is changed in the
+places listed below (STOCK). --base puts the changes on a built release instead of stock (only its Entry 0
+changes; the stock file is still read for the images). --debug assembles a test build that adds a debug key
+to POD Go Edit's reads (needs arm-none-eabi binutils; not for POD Go Edit or an install).
+Run it from RAM first (tools/hxf_ram.py run ... --writes ram). docs/research/SNAPSHOTS_6.md.
 """
 import hashlib
 import json
@@ -27,6 +33,8 @@ CAVE_VA = 0x28ce4100
 SRC = os.path.join(HERE, 'snap6', 'snap6.s')
 BIN = os.path.join(ROOT, 'build', 'snap6', 'snap6.bin')     # holds the tile images: build/ only, never published
 SYMS_JSON = os.path.join(ROOT, 'build', 'snap6', 'snap6.syms.json')   # hook addresses, from the link (assemble)
+CODE_BIN = os.path.join(HERE, 'snap6', 'snap6_code.bin')     # committed: the release assembly up to img_recs
+CODE_SYMS = os.path.join(HERE, 'snap6', 'snap6_syms.json')
 HOOKS = ('sel_hook', 'reset_hook', 'st_feac', 'st_fa6c', 'ser_hook', 'des_hook',
          'wrap_7944', 'wrap_8040', 'wrap_8240', 'wrap_84a8',
          'fs_hook', 'draw_hook', 'cur_virt', 'vname', 'mask_stub', 'rec_hook', 'idx_hook', 'open_hook',
@@ -82,10 +90,31 @@ def assemble(stock, debug=True):
                        + (['--defsym', 'DEBUG=1'] if debug else []) + [SRC, '-o', o], check=True)
         subprocess.run(['arm-none-eabi-ld', f'-Ttext={CAVE_VA:#x}', '-e', 'sel_hook', o, '-o', elf], check=True)
         nm = subprocess.run(['arm-none-eabi-nm', elf], capture_output=True, text=True, check=True).stdout
-        got = {l.split()[2]: int(l.split()[0], 16) for l in nm.splitlines() if l.split()[-1] in HOOKS}
-        assert set(got) == set(HOOKS) and got['sel_hook'] == CAVE_VA, f'symbols: {got}'
+        got = {l.split()[2]: int(l.split()[0], 16) for l in nm.splitlines() if l.split()[-1] in HOOKS + ('img_recs',)}
+        assert set(got) == set(HOOKS) | {'img_recs'} and got['sel_hook'] == CAVE_VA, f'symbols: {got}'
         subprocess.run(['arm-none-eabi-objcopy', '-O', 'binary', elf, BIN], check=True)
         json.dump(got, open(SYMS_JSON, 'w'), indent=1)
+    return open(BIN, 'rb').read(), got
+
+
+def update_code(stock):
+    """Re-assemble the release (no debug) build and commit its code part: everything before the images."""
+    full, syms = assemble(stock, debug=False)
+    n = syms['img_recs'] - CAVE_VA
+    open(CODE_BIN, 'wb').write(full[:n])
+    json.dump(syms, open(CODE_SYMS, 'w'), indent=1, sort_keys=True)
+    open(CODE_SYMS, 'a').write('\n')
+    print(f'{CODE_BIN}: {n} B of code and data; images ({len(full) - n} B) come from the firmware at build time')
+
+
+def code_with_images(stock_data):
+    """The committed code with the tile images drawn from stock_data (the stock L6IA bytes): (bytes, syms)."""
+    import snap6_ui
+    code = open(CODE_BIN, 'rb').read()
+    syms = json.load(open(CODE_SYMS))
+    assert syms['img_recs'] - CAVE_VA == len(code), 'snap6_code.bin and snap6_syms.json disagree'
+    recs, ents, pix, _ = snap6_ui.images(stock_data)
+    return code + recs + ents + pix, syms
 
 
 def thumb_bw(src, dst, link=False):
@@ -96,8 +125,9 @@ def thumb_bw(src, dst, link=False):
                        (0xd000 if link else 0x9000) | (j1 << 13) | (j2 << 11) | ((off >> 1) & 0x7ff))
 
 
-def entry0(e0, log=print):
-    """Entry 0 (swapped payload, stock 2.50 code segment, with or without --model-names's cave)."""
+def entry0(e0, code, SYMS, log=print):
+    """Entry 0 (swapped payload, stock 2.50 code segment, with or without --model-names's cave), with `code`
+    (code_with_images, or a --debug assembly) and its symbols."""
     import patch_amp as pa
     e0 = bytearray(e0)
     segs = pa._parse_e0_segments(e0)
@@ -111,8 +141,6 @@ def entry0(e0, log=print):
     for va, want in stock.items():
         got = bytes(e0[fo(va): fo(va) + len(want) // 2])
         assert got == bytes.fromhex(want), f'Entry 0 at {va:#x} is {got.hex()}, not {want}'
-    code = open(BIN, 'rb').read()
-    SYMS = json.load(open(SYMS_JSON))
     e0[fo(SELECT): fo(SELECT) + 4] = thumb_bw(SELECT, SYMS['sel_hook'])
     e0[fo(RESET): fo(RESET) + 4] = thumb_bw(RESET, SYMS['reset_hook'])
     e0[fo(CC69_CMP)] = 5                                   # cmp r4, #5
@@ -134,7 +162,7 @@ def entry0(e0, log=print):
     n = slen + pad + len(code)
     struct.pack_into('<3I', out, hdr, n, dst, poff + n)
     struct.pack_into('<I', out, 4, len(out))
-    log(f'[+] Entry 0: snapshots 5 and 6 on CC69 values 4 and 5, saved with the preset ({len(code)} B at {CAVE_VA:#x})')
+    log(f'[+] Entry 0: six snapshots (hold MODE), 5 and 6 saved with the preset ({len(code)} B at {CAVE_VA:#x})')
     return bytes(out)
 
 
@@ -146,14 +174,17 @@ def main():
     md5 = hashlib.md5(open(stock, 'rb').read()).hexdigest()
     if md5 != STOCK_MD5:
         sys.exit(f'{stock}: MD5 {md5}, not POD_Go_v2.50.0_0x6e984472.hxf')
+    if '--update-code' in a:
+        return update_code(stock)
     out = a[a.index('-o') + 1] if '-o' in a else os.path.join(ROOT, 'build', 'POD_Go_v2.50.0_Snap6_test.hxf')
-    if '--assemble' in a or '--no-debug' in a or not os.path.exists(BIN):
-        assemble(stock, debug='--no-debug' not in a)    # --no-debug: no editor-visible debug key (key 15)
     import kit_patch_amp as kp
     import l6ia
     import patch_amp
-    data, _ = patch_amp.load_l6ia_from_any(stock)
-    image, _, _ = l6ia.rebuild_archive(data, {0: entry0(kp.get_entry_swapped(data, 0))})
+    stock_data, _ = patch_amp.load_l6ia_from_any(stock)
+    code, syms = assemble(stock, debug=True) if '--debug' in a else code_with_images(stock_data)
+    base = a[a.index('--base') + 1] if '--base' in a else stock     # --base: a built release (e.g. the NAM one)
+    data = patch_amp.load_l6ia_from_any(base)[0] if base != stock else stock_data
+    image, _, _ = l6ia.rebuild_archive(data, {0: entry0(kp.get_entry_swapped(data, 0), code, syms)})
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
     img = out[:-4] + '.l6ia'
     open(img, 'wb').write(image)
@@ -161,9 +192,9 @@ def main():
     rep = subprocess.run([py, os.path.join(ROOT, 'tools', 'l6ia_verify.py'), img], capture_output=True, text=True).stdout
     if 'ALL OK' not in rep:
         sys.exit('snapshots6.py: the image failed its checksum check\n' + rep)
-    subprocess.run([py, os.path.join(ROOT, 'tools', 'hxf.py'), 'pack', img, out, '--donor', stock], check=True)
+    subprocess.run([py, os.path.join(ROOT, 'tools', 'hxf.py'), 'pack', img, out, '--donor', base], check=True)
     print(f'Done: {out} (MD5 {hashlib.md5(open(out, "rb").read()).hexdigest()})')
-    print(f'Run it from RAM: python3 tools/hxf_ram.py run {os.path.relpath(out, ROOT)} --stock {stock} --writes ram')
+    print(f'Run it from RAM: python3 tools/hxf_ram.py run {os.path.relpath(out, ROOT)} --stock <the .hxf installed> --writes ram')
 
 
 if __name__ == '__main__':

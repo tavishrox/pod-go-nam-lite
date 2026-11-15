@@ -10,6 +10,7 @@ __pycache__/
 .venv/
 .pytest_cache/
 !tools/ramboot/*.bin
+!podgo/snap6/snap6_code.bin
 
 # POD Go: never publish Line 6 firmware, builds, artwork taken from it, recordings or captures
 *.hxf

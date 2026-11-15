@@ -27,6 +27,9 @@ def test_md5s_and_options_match():
     assert js_value('BUILT_MD5_NAMES') == build_podgo.BUILT_MD5_NAMES
     assert js_value('BUILT_MD5_EDITION_NAMES') == build_podgo.BUILT_MD5_EDITION_NAMES
     assert build_podgo.out_name(True, True) == 'POD_Go_v2.50.0_NAM_A2_Lite_ToneShift_Edition_Names.hxf'
+    assert build_podgo.out_name(True, True, True) == 'POD_Go_v2.50.0_NAM_A2_Lite_ToneShift_Edition_Names_Snap6.hxf'
+    snap6 = js_value('BUILT_MD5_SNAP6')
+    assert {tuple(k == 'true' for k in key.split(',')): v for key, v in snap6.items()} == build_podgo.BUILT_MD5_SNAP6
     for path in js_value('EDITION_SOURCES'):
         assert os.path.exists(os.path.join(ROOT, path)), path
     assert {os.path.relpath(v[1], ROOT) for v in build_podgo.EDITION.values()} <= set(js_value('EDITION_SOURCES'))
@@ -38,5 +41,15 @@ def test_sources_exist_and_cover_the_imports():
         assert os.path.exists(os.path.join(ROOT, path)), path
     names = {os.path.splitext(os.path.basename(p))[0] for p in sources}
     for mod in ('build_podgo', 'podgo_model', 'podgo_e2', 'kit_patch_amp', 'patch_amp', 'effects', 'l6ia',
-                'hxf', 'sasm', 'ssim', 'entry4_blob', 'nam_multi', 'nam_lite', 'nam_pack', 'l6ia_verify'):
+                'hxf', 'sasm', 'ssim', 'entry4_blob', 'nam_multi', 'nam_lite', 'nam_pack', 'l6ia_verify',
+                'model_names', 'snapshots6', 'snap6_ui'):
         assert mod in names, mod
+
+
+def test_snap6_code_matches_its_symbols():
+    import json
+    import snapshots6
+    syms = json.load(open(snapshots6.CODE_SYMS))
+    assert syms['sel_hook'] == snapshots6.CAVE_VA
+    assert syms['img_recs'] - snapshots6.CAVE_VA == os.path.getsize(snapshots6.CODE_BIN)
+    assert set(snapshots6.HOOKS) <= set(syms)

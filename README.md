@@ -18,6 +18,11 @@ POD Go's own DSP as an amp block, with your effects either side of it.
 > installing, or you'd be uncomfortable bricking your unit, sleep on it. I talk about who this is for in the
 > video: it's for tinkerers, the kind of folks who hang around on GitHub, the same folks who were modding Tube
 > Screamers in the 80s. Just a heads-up: understand the risks before you start. *ToneShift*
+>
+> **No Line 6 files in this project.** This repository contains no Line 6 firmware, code or artwork. Everything
+> that uses Line 6's work is made during the build, on your computer, from the official firmware file you
+> download from Line 6: the NAM block is written into your own copy, the boot screen is drawn over your own, and
+> the six-snapshot tiles are drawn from your own firmware's snapshot images.
 
 This is a fork of **[hx-stomp-nam-lite](https://github.com/nocaseguy/hx-stomp-nam-lite)** by Derek Bui,
 which does the same for the HX Stomp, HX Stomp XL and HX Effects: for those units, use Derek's project.
@@ -35,6 +40,9 @@ which does the same for the HX Stomp, HX Stomp XL and HX Effects: for those unit
   how hard it's driven, and **Output**.
 - **The ToneShift Edition** (optional): a boot screen with ToneShift's "NAM A2 Edition" lettering over your POD Go's own splash.
 - **Free the fixed blocks.** [Preset templates](templates/) for NAM without the cab, FX loop or fixed EQ (or just without the FX loop), and a
+- **Six snapshots** (optional, experimental): hold MODE and the footswitches become snapshots 1&ndash;6 (bottom row
+  1 2 3, top row 4 5 6), with 5 and 6 saved in the preset. POD Go Edit only sees four: see
+  [Six snapshots](POD_GO.md#six-snapshots-experimental) for what that means.
   [block helper](POD_GO.md#the-block-helper) to put an amp, cab, IR or FX loop into any empty block.
 
 ## How it works, in one paragraph

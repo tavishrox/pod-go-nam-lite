@@ -127,6 +127,33 @@ value, the sound, your presets and POD Go Edit are as before. Keep names short: 
 A value in [brackets] is under snapshot control (as on any POD Go knob): handy, since each snapshot can pick
 a different capture.
 
+### Six snapshots (experimental)
+
+Tick **Six snapshots** on the setup page (or `--snapshots6` on the command line).
+
+- **Hold MODE** (top right) and the footswitches become six snapshot switches: bottom row **1 2 3**, top row
+  **4 5 6** (Bank Up and Bank Down become 4 and 1). The screen shows six tiles, the LED rings follow and the
+  top-right icon shows 5 and 6. Hold MODE again for the normal footswitches and banks.
+- MIDI CC69 values 4 and 5 select snapshots 5 and 6.
+- **Saving:** 5 and 6 are saved inside the preset when you save on the POD Go, and survive a power-cycle. As
+  with the stock snapshots, save while on each snapshot you change.
+
+**POD Go Edit can't see 5 and 6.** The editor only knows four snapshots; the change lives in the POD Go. The
+editor still connects, edits and saves normally, and saving from the editor keeps 5 and 6 (the POD Go writes
+them). Anything that sends a whole preset from the computer replaces them:
+
+| Action | 5 and 6 |
+|---|---|
+| Save on the POD Go, or save from POD Go Edit | kept |
+| Save to another slot on the POD Go | kept |
+| Copy/paste in POD Go Edit's preset list | lost |
+| Export and import a .pgp | lost |
+| Restore a backup | not tested: expect lost |
+
+To copy or move a preset that uses 5 and 6, save it to the new slot on the POD Go itself. The tile and icon
+images are drawn at build time from your own firmware's snapshot images (`podgo/snap6_ui.py`); the code is
+`podgo/snap6/snap6.s` (committed assembled as `snap6_code.bin`). How it works: `docs/research/SNAPSHOTS_6.md`.
+
 ### DSP use
 
 NAM takes about **28%** of the POD Go's DSP (measured on the unit). The unit counts it as **2,850** of
@@ -259,7 +286,9 @@ It checks your file's MD5, builds the NAM code and runs it in a SHARC simulator 
 
 - **One NAM block per preset**: the POD Go has one amp block.
 - **POD Go Edit** shows the block as Line 6 Elektrik with Elektrik's knob names and DSP figure.
-- **Model shows a number**, not the capture's name.
+- **Model shows a number**, not the capture's name (unless you tick the names option).
+- **Six snapshots** (option): POD Go Edit shows four; copying a preset in the editor, .pgp files and backups
+  drop 5 and 6.
 - **Input calibration** uses 11.5 dBu at full scale, the Helix family's figure; the POD Go measured
   11.44 dBu, the same. If a drive capture still feels off, adjust Input.
 - **Firmware 2.50 only.** Another firmware version needs the build updated.

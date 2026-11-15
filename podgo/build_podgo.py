@@ -2,11 +2,13 @@
 """Build POD Go 2.50 firmware with NAM A2 Lite in the amp list, on Line 6 Elektrik's identity.
 
     python3 podgo/build_podgo.py POD_Go_v2.50.0_0x6e984472.hxf [-o OUT.hxf] [--no-check]
-        [--donor elektrik|plexi] [--edition] [--splash IMG] [--splash-wireless IMG] [--model-names]
+        [--donor elektrik|plexi] [--edition] [--splash IMG] [--splash-wireless IMG] [--model-names] [--snapshots6]
 
 --edition: the ToneShift Edition: boot screens with "NAM A2 Edition" lettering (art/nam-a2-edition/, by ToneShift), drawn over the boot screens
 of your own firmware file (no Line 6 artwork is in this repository). --splash IMG: a whole 480x272 image.
 --model-names (experimental): the NAM block's Model knob shows the slot and its IR's name (podgo/model_names.py).
+--snapshots6 (experimental): hold MODE for six snapshots, 5 and 6 saved with the preset (podgo/snapshots6.py).
+  POD Go Edit still shows four: copying a preset in the editor, .pgp export/import and backups drop 5 and 6.
 
 Unofficial and experimental: try it from RAM first (tools/hxf_ram.py run OUT --stock STOCK).
 Steps (docs/PODGO_PORT_MAP.md):
@@ -42,14 +44,22 @@ EDITION = {'Splash': ('overlay', os.path.join(ROOT, 'art', 'nam-a2-edition', 'wi
            'Splash_Wireless': ('overlay', os.path.join(ROOT, 'art', 'nam-a2-edition', 'wireless.png'))}
 
 
-def pinned_md5(edition, names):
+# --snapshots6 (experimental, podgo/snapshots6.py): {(edition, names): MD5}
+BUILT_MD5_SNAP6 = {(False, False): '2aaa7a361f804bb21074a8fed73ec6b7', (True, False): '6218d93a056a2e33a94afddd84d3485d',
+                   (False, True): '4781124ccc37a38580d08257498330f5', (True, True): '240fd8c66361564c2b38ab44f34809b7'}
+
+
+def pinned_md5(edition, names, snap6=False):
+    if snap6:
+        return BUILT_MD5_SNAP6.get((edition, names))
     return {(False, False): BUILT_MD5, (True, False): BUILT_MD5_EDITION,
             (False, True): BUILT_MD5_NAMES, (True, True): BUILT_MD5_EDITION_NAMES}[edition, names]
 
 
-def out_name(edition, names):
+def out_name(edition, names, snap6=False):
     base = OUT_NAME_EDITION if edition else OUT_NAME
-    return base.replace('.hxf', '_Names.hxf') if names else base
+    base = base.replace('.hxf', '_Names.hxf') if names else base
+    return base.replace('.hxf', '_Snap6.hxf') if snap6 else base
 
 
 def run(*args):
@@ -63,7 +73,7 @@ def run(*args):
 
 
 def make_image(data, asm_src, asm_name='nam_lite_podgo_b32.asm', donor=None, splashes=None, log=print,
-               model_names=False):
+               model_names=False, snapshots6=False):
     """The L6IA image with NAM A2 Lite: `data` the stock L6IA, `asm_src` the kernel (nam_multi.py's output).
     splashes: {'Splash' | 'Splash_Wireless': image path, or ('overlay', PNG) drawn over the stock screen}."""
     import kit_patch_amp as kp
@@ -84,6 +94,10 @@ def make_image(data, asm_src, asm_name='nam_lite_podgo_b32.asm', donor=None, spl
     e = l6ia.parse(data)[2]
     e2 = podgo_e2.patch_e2(data[e['payload_off']: e['payload_off'] + e['payload_len']], asm_src, asm_name, log=log)
     new[2] = l6ia.swap32(e2)
+    if snapshots6:                                       # after model_names: its cave goes first in segment 6
+        import snapshots6 as s6
+        code, syms = s6.code_with_images(data)
+        new[0] = s6.entry0(new[0] if 0 in new else kp.get_entry_swapped(data, 0), code, syms, log=log)
     image, _, _ = l6ia.rebuild_archive(data, new)
     return image
 
@@ -99,7 +113,7 @@ def main():
     build = os.path.join(ROOT, 'build')
     os.makedirs(build, exist_ok=True)
     out = os.path.abspath(a[a.index('-o') + 1]) if '-o' in a else \
-        os.path.join(build, out_name('--edition' in a, '--model-names' in a))
+        os.path.join(build, out_name('--edition' in a, '--model-names' in a, '--snapshots6' in a))
     asm = os.path.join(build, 'nam_lite_podgo_b32.asm')
     meter = a[a.index('--meter') + 1] if '--meter' in a else None     # a test image (no check: it plays the meter)
     if meter:
@@ -114,7 +128,7 @@ def main():
                      for opt, name in (('--splash', 'Splash'), ('--splash-wireless', 'Splash_Wireless')) if opt in a})
     image = make_image(data, open(asm).read(), os.path.basename(asm),
                        donor=a[a.index('--donor') + 1] if '--donor' in a else None, splashes=splashes,
-                       model_names='--model-names' in a)
+                       model_names='--model-names' in a, snapshots6='--snapshots6' in a)
     img_path = os.path.join(build, 'POD_Go_v2.50.0_NAM_A2_Lite.l6ia')
     open(img_path, 'wb').write(image)
     report = run(sys.executable, 'tools/l6ia_verify.py', img_path)
@@ -123,8 +137,9 @@ def main():
     run(sys.executable, 'tools/hxf.py', 'pack', img_path, out, '--donor', stock)
     got = hashlib.md5(open(out, 'rb').read()).hexdigest()
     pinned = None if meter or '--donor' in a or (splashes and splashes != EDITION) else \
-        pinned_md5(bool(splashes), '--model-names' in a)
-    tested = ', the project build (Model names: experimental)' if '--model-names' in a else ', the tested build'
+        pinned_md5(bool(splashes), '--model-names' in a, '--snapshots6' in a)
+    tested = ', the project build (experimental options)' if '--model-names' in a or '--snapshots6' in a \
+        else ', the tested build'
     print(f'\nDone: {out} (MD5 {got}' + (tested if got == pinned else
                                          ', NOT the tested build: please report' if pinned else '') + ')')
     print(f'Try it from RAM first: python3 tools/hxf_ram.py run {os.path.relpath(out, ROOT)} --stock {a[0]}')

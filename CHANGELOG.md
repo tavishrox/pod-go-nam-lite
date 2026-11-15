@@ -3,6 +3,19 @@
 Major changes, newest first. The repository has no version numbers, so each entry is dated and names its commit. Status labels follow the README: "ran on" means a person ran that build on that unit.
 
 
+## 2026-11-15: POD Go six snapshots (experimental)
+
+- `--snapshots6` (a tick box on the setup page): hold MODE for six snapshots on the footswitches (bottom row
+  1 2 3, top row 4 5 6, Bank Up/Down as 4 and 1), six tiles on screen, LEDs and the top-right icon; 5 and 6
+  saved inside the preset; MIDI CC69 values 4 and 5. POD Go Edit sees four: editor copy/paste, .pgp files and
+  backups drop 5 and 6 (`POD_GO.md` "Six snapshots").
+- `podgo/snapshots6.py`, `podgo/snap6/snap6.s` (committed assembled: `snap6_code.bin`, `snap6_syms.json`), and
+  `podgo/snap6_ui.py`, which draws the tiles and icons from the user's own firmware at build time: no Line 6
+  artwork in the repository. Notes: `docs/research/SNAPSHOTS_6.md`.
+- Installed on a POD Go Wireless (ToneShift Edition with names and six snapshots): six-snapshot screen, LEDs,
+  switches, MIDI, save and reload, and a power-cycle all passed. MD5s 2aaa7a36 (Elektrik), 6218d93a (Edition),
+  4781124c (names), 240fd8c6 (Edition and names).
+
 ## 2026-11-11: NAM FX Loop template
 
 - `templates/NAM FX Loop.pgp`: volume, wah, NAM and the FX loop (after NAM, off, on footswitch 1), no cab or

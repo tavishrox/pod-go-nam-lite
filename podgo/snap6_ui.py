@@ -26,9 +26,10 @@ IMG_ID0, ENT8_0 = 546, 0x1000          # ids past the stock 546 images; Entry 8 
 
 
 def stock_images(hxf):
+    """hxf: a .hxf path, or the L6IA bytes already loaded from one."""
     import kit_patch_amp as kp
     import patch_amp as pa
-    data, _ = pa.load_l6ia_from_any(hxf)
+    data = hxf if isinstance(hxf, (bytes, bytearray)) else pa.load_l6ia_from_any(hxf)[0]
     e7, e8 = kp.get_entry_swapped(data, 7), kp.get_entry_swapped(data, 8)
     names = [n.decode('latin1') for n in e7[4404:12812].split(b'\0')[:546]]
 
@@ -111,8 +112,8 @@ def icon(get, n, red):
     return redigit(get(f'Icon_Snapshot4{suf}')[0], get(f'Icon_Snapshot1{suf}')[0], n)
 
 
-def build(hxf, out_dir, png=False):
-    """Images IMG_ID0.. : tiles 1-6, selected tiles 1-6, icons 5 6, red icons 5 6."""
+def images(hxf):
+    """(recs, ents, pix, imgs): images IMG_ID0.. : tiles 1-6, selected tiles 1-6, icons 5 6, red icons 5 6."""
     get = stock_images(hxf)
     _, rec_tile = get('Play_Snapshot1')
     _, rec_icon = get('Icon_Snapshot1')
@@ -128,6 +129,11 @@ def build(hxf, out_dir, png=False):
         body = a[:, ::-1].astype('<u2').tobytes()
         ents += struct.pack('<2I', len(body), len(pix))
         pix += body
+    return recs, ents, pix, imgs
+
+
+def build(hxf, out_dir, png=False):
+    recs, ents, pix, imgs = images(hxf)
     os.makedirs(out_dir, exist_ok=True)
     for name, b in (('recs.bin', recs), ('ents.bin', ents), ('pix.bin', pix)):
         open(os.path.join(out_dir, name), 'wb').write(b)
