@@ -95,7 +95,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
     <div class="eyebrow">POD Go companion · experiment</div>
     <h1>Morph Pad</h1>
     <p class="lead">Drag the crosshair to blend a block between five tones: one in the centre, a different voicing in each corner. Every parameter of the model moves, knobs blend and switches change at the halfway point, and the block follows slowly, so a fast move becomes a smooth sweep.</p>
-    <p class="note"><b>Edit buffer only.</b> Connected, the pad moves the block's parameters live, the way POD Go Edit does. Nothing is saved: the preset shows as edited, and reloading it on the unit puts everything back. Quit POD Go Edit first; use Chrome or Edge on a computer.</p>
+    <p class="note"><b>Saved only when you say.</b> Connected, the pad moves the block's parameters live, the way POD Go Edit does. Nothing is saved until you press <b>Save to the preset</b>, which saves the preset that's loaded, in its own slot and name; until then, reloading it on the unit puts everything back. Quit POD Go Edit first; use Chrome or Edge on a computer.</p>
   </header>
 
   <section class="panel">
@@ -104,6 +104,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
       <button id="disconnect" class="ghost" hidden>Disconnect</button>
       <label class="chk"><span id="pickLabel">Tones for</span> <select id="pick"></select></label>
       <button id="restore" class="ghost" hidden>Put the block back as it was</button>
+      <button id="save" hidden>Save to the preset</button>
     </div>
     <p class="status" id="conn">Not connected: the pad runs as a simulation.</p>
     <div class="row">
@@ -159,16 +160,6 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
       <input type="file" id="importDir" webkitdirectory multiple hidden>
     </div>
     <p class="status">Changes are kept in this browser, per model. <b>Blend</b> parameters are averaged; <b>pick</b> parameters (switches, selectors) take the value of the tone with the most weight; <b>fixed</b> ones are left as they are on the unit. Level the five tones with Ch Vol so the sweep doesn't jump in loudness.</p>
-  </section>
-
-  <section class="panel">
-    <h2>How it works</h2>
-    <ul>
-      <li>Each model has its own set of five tones: a centre and four corners, each with a name and a value for every parameter it sets. Tone files use one JSON shape: <code>{modelName, params: {Name: {behavior}}, regions: {origin, x_min_y_max, x_max_y_max, x_min_y_min, x_max_y_min}}</code>, top left, top right, bottom left, bottom right.</li>
-      <li>The centre tone's share is <code>(1 − |x|)·(1 − |y|)</code>; the rest is split between the corners by bilinear weighting, so an edge blends only its two corners and each tone's own spot plays that tone exactly.</li>
-      <li>Glide moves the real position towards the crosshair with a time constant. Only parameters that changed are sent, one message at a time, at most 30 batches a second.</li>
-      <li>Tones come from your own edits first, then tone files you imported, then the defaults (Line 6's Focus View tones, or ours for the EQs and two delays). A model with none starts with all five set to the block as it is on the unit: edit them, or copy the block into a tone after dialling it in on the unit.</li>
-    </ul>
   </section>
 </div>
 
@@ -726,6 +717,7 @@ function lost(e) {
 function afterDisconnect() {
   document.getElementById('connect').hidden = false;
   document.getElementById('disconnect').hidden = true;
+  document.getElementById('save').hidden = true;
   document.getElementById('restore').hidden = true; document.getElementById('grab').hidden = true;
   fillPicker(cur && cur.id);
 }
@@ -735,9 +727,10 @@ document.getElementById('connect').onclick = async () => {
     pg = await PODGOUSB.connect(navigator.usb);
     pg.onNotify(onNote);
     const c = await pg.current();
-    connEl.textContent = `Connected to preset ${c.preset} "${c.name}" · reading the blocks…`;
+    connEl.textContent = `Connected to preset ${c.preset + 1} "${c.name}" · reading the blocks…`;
     document.getElementById('connect').hidden = true;
     document.getElementById('disconnect').hidden = false;
+    document.getElementById('save').hidden = false;
     await scan();
   } catch (e) {
     if (pg) pg.close().catch(() => {});
@@ -779,6 +772,29 @@ document.getElementById('restore').onclick = () => { armed = false; q(async () =
   } catch (e) { lost(e); }
   busy = false;
 }); };
+
+// Save: the unit's own save (0x46) of the edit buffer into the preset that's loaded, same slot, same name.
+// It saves what is on the unit now, so the pad stops first; "put back" then returns to the saved version.
+document.getElementById('save').onclick = async () => {
+  if (!pg) return;
+  let c;
+  try { c = await q(() => pg.current()); } catch (e) { lost(e); return; }
+  if (!confirm(`Save preset ${c.preset + 1} "${c.name}" on the POD Go as it sounds now?\n\nThis replaces the saved version of that preset.`)) return;
+  armed = false;
+  await q(async () => {
+    busy = true;
+    try {
+      await pg.saveAs(c.preset, c.name, c.setlist);
+      if (cur && cur.live) {
+        const info = await pg.slotInfo(cur.live.pos);
+        if (info) { cur.live.values = info.values.slice(); cur.live.original = info.values.slice(); }
+      }
+      connEl.innerHTML = connEl.innerHTML.replace(/ · (move the pad|put back|saved).*$/, '') +
+        ` · saved to preset ${c.preset + 1} "${escapeHtml(c.name)}"; move the pad to carry on.`;
+    } catch (e) { lost(e); }
+    busy = false;
+  });
+};
 
 function onNote(m) {
   if (!(m instanceof Map)) return;
