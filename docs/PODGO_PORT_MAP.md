@@ -472,7 +472,7 @@ kept whole. .pgp layout learned from exports: @type 0 effect, 1 amp, 5 stereo de
 @fs_index 1..6 = FS A..F, 9 = the expression pedal (volume on controller 2, wah on controller 1 with the toe).
 Model is stored 0..1: 0.03 = IR slot 4 (shown 0.3).
 2026-11-09: NAM No FX Loop (wah, volume, NAM, cab HD2_Cab4X12CaliV30 @type 2 with @mic, fixed EQ
-HD2_EQ_STATIC_ParametricStereo @type 6 off: 3,886) and NAM No FX Loop or Cab (3,636): the stock layout without
+HD2_EQ_STATIC_ParametricStereo @type 6 off: 4,236; the legacy 4x12 Cali V30 cab costs 600, first written as 3,886) and NAM No FX Loop or Cab (3,636): the stock layout without
 the loop, block types as stock exports store them. Not yet imported on the unit.
 2026-11-11: NAM FX Loop (volume, wah, NAM, HD2_FXLoopMono1 @type 5 with @trails false, off, FS 1: 3,536 =
 150 + 336 + 2,850 + 200, costs from the firmware tables via podgo/blocks.py list). Block as a stock export stores

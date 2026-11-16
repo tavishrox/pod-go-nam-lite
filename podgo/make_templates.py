@@ -44,7 +44,7 @@ TEMPLATES = {
         ("HD2_ReverbHallStereo", 6, True)], 6725),
     "NAM No FX Loop": ("Stock layout without the FX loop: wah, volume, NAM, cab, EQ; 5 empty blocks", [
         ("HD2_WahFasselStereo", "toe", False), ("HD2_VolPanVolStereo", "exp", True), (NAM, None, True),
-        (CAB, None, True), (FIXED_EQ, None, False)], 3886),
+        (CAB, None, True), (FIXED_EQ, None, False)], 4236),
     "NAM No FX Loop or Cab": ("Stock layout without the FX loop or cab: wah, volume, NAM, EQ; 6 empty blocks", [
         ("HD2_WahFasselStereo", "toe", False), ("HD2_VolPanVolStereo", "exp", True), (NAM, None, True),
         (FIXED_EQ, None, False)], 3636),

@@ -3,6 +3,13 @@
 Major changes, newest first. The repository has no version numbers, so each entry is dated and names its commit. Status labels follow the README: "ran on" means a person ran that build on that unit.
 
 
+## 2026-11-16: Neon theme for the pages
+
+- The setup, converter and guide pages use the ToneShift neon theme (`web/pod-go/neon.css`): night background,
+  pink and cyan, poster headings, a nav bar. Printing stays plain and light; the guide PDF is reprinted from it.
+- The NAM No FX Loop template costs 4,236 units, not 3,886: its legacy 4x12 Cali V30 cab is 600, not 250.
+  The figure is corrected on the setup page, in `POD_GO.md` and in `podgo/make_templates.py`; the file is unchanged.
+
 ## 2026-11-15: POD Go six snapshots (experimental)
 
 - `--snapshots6` (a tick box on the setup page): hold MODE for six snapshots on the footswitches (bottom row

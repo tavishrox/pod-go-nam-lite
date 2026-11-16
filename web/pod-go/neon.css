@@ -152,4 +152,5 @@ footer { color: var(--muted); border-top-color: var(--rule); }
   th { color: #111 !important; background: #eee !important; }
   pre, .drop { background: #f4f4f4 !important; }
   code { color: #111; }
+  .note b, .note strong, h3 { color: #111 !important; }   /* white on screen; would vanish on paper */
 }
