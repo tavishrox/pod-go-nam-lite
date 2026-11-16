@@ -3,6 +3,18 @@
 Major changes, newest first. The repository has no version numbers, so each entry is dated and names its commit. Status labels follow the README: "ran on" means a person ran that build on that unit.
 
 
+## 2026-11-16: HX Effects on the setup page
+
+- The setup page's builder has a third option, **HX Effects: NAM A2 Lite**: upstream's HX Effects 3.80.0 build
+  (`build.py`, `tools/effects.py`), built in the browser from the user's stock `HX_Effects_v3.80.0_0xd97239907.hxf`
+  and verified against upstream's pinned MD5 `2efb9879…` (`web/pod-go/firmware-worker.js`, `buildHxfx`;
+  `tests/test_podgo_build.py` keeps the values equal to `build.py`). Installed and played on an HX Effects: the
+  first run of this build on that unit. No RAM run on the HX Effects.
+- A "Now including HX Effects, fully tested" badge and the HX Effects in the eyebrow line; HX Effects recovery
+  (hold > at power-on) on the setup page, in the guide, `README.md` and `POD_GO.md`.
+- `docs/research/HX_EFFECTS_NAM.md`: what upstream provides, the firmware file, where the block goes, risks,
+  the test, and a first look at six snapshots on the HX Effects.
+
 ## 2026-11-16: Neon theme for the pages
 
 - The setup, converter and guide pages use the ToneShift neon theme (`web/pod-go/neon.css`): night background,
