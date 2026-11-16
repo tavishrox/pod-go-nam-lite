@@ -3,11 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>POD Go Morph Pad</title>
-<meta name="description" content="An X-Y pad that blends a POD Go block between five tones: a centre and four corners.">
+<title>MORF-X for POD Go</title>
+<link rel="icon" href="morf-x-icon.svg" type="image/svg+xml">
+<meta name="description" content="MORF-X: your tone, in motion. An X-Y pad that blends a POD Go block between five tones: a centre and four corners.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Michroma&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
+/* MORF-X lockup: the mark, the wordmark (silver MORF-, cyan X) and the tagline */
+.morfx { display: flex; align-items: center; gap: clamp(12px, 2.5vw, 20px); margin: 8px 0 6px;
+  font: 400 clamp(36px, 8vw, 68px)/1 "Michroma", "Space Grotesk", sans-serif; letter-spacing: 0.03em; }
+.morfx img { width: clamp(56px, 11vw, 92px); height: auto; flex: none; }
+.morfx .word { background: linear-gradient(180deg, #ffffff 0%, #e4e9f0 42%, #97a3b3 56%, #eef2f6 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; white-space: nowrap; }
+.morfx .x { color: #5fe0db; -webkit-text-fill-color: #5fe0db; text-shadow: 0 0 18px #5fe0db66; }
+.morfx-tag { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; font: 500 12px/1 "IBM Plex Mono", monospace;
+  letter-spacing: 0.32em; text-transform: uppercase; color: #c9cfdb; }
+.morfx-tag::before, .morfx-tag::after { content: ""; height: 1px; width: 36px; background: #5fe0db; opacity: 0.8; }
 :root {
   --bg: #e9ebe8; --panel: #f6f7f5; --ink: #1a1d1f; --muted: #5d6468; --rule: #c9cdca;
   --accent: #c2410c; --accent-ink: #ffffff; --ok: #2f7a3b; --warn: #a15c07; --bad: #b42318;
@@ -90,11 +101,12 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
 <link rel="stylesheet" href="neon.css">
 </head>
 <body>
-<nav class="neon-nav" aria-label="Pages"><div class="in"><a class="neon-logo" href="index.html">ToneShift</a><div class="links"><a href="index.html">Setup</a><a href="converter.html">Converter</a><a href="how-to.html">Guide</a><a href="companion.html">Companion</a><a href="morph.html" aria-current="page">Morph Pad</a><a href="https://github.com/tavishrox/pod-go-nam-lite">GitHub</a></div></div></nav>
+<nav class="neon-nav" aria-label="Pages"><div class="in"><a class="neon-logo" href="index.html">ToneShift</a><div class="links"><a href="index.html">Setup</a><a href="converter.html">Converter</a><a href="how-to.html">Guide</a><a href="companion.html">Companion</a><a href="morph.html" aria-current="page">MORF-X</a><a href="https://github.com/tavishrox/pod-go-nam-lite">GitHub</a></div></div></nav>
 <div class="wrap">
   <header>
     <div class="eyebrow">POD Go companion · experiment</div>
-    <h1>Morph Pad</h1>
+    <h1 class="morfx"><img src="morf-x-icon.svg" alt="" width="92" height="92"><span class="word" aria-label="MORF-X">MORF-<span class="x">X</span></span></h1>
+    <p class="morfx-tag">Your tone. In motion.</p>
     <p class="lead">Drag the crosshair to blend a block between five tones: one in the centre, a different voicing in each corner. Every parameter of the model moves, knobs blend and switches change at the halfway point, and the block follows slowly, so a fast move becomes a smooth sweep.</p>
     <p class="note"><b>Saved only when you say.</b> Connected, the pad moves the block's parameters live, the way POD Go Edit does. Nothing is saved until you press <b>Save to the preset</b>, which saves the preset that's loaded, in its own slot and name; until then, reloading it on the unit puts everything back. Quit POD Go Edit first; use Chrome or Edge on a computer.</p>
   </header>
@@ -646,8 +658,8 @@ async function saveMyTones(pickNew) {
   const data = myTonesJson();
   if (window.showSaveFilePicker) {             // Chrome and Edge: keep saving to the same file
     try {
-      if (!mineFile || pickNew) mineFile = await showSaveFilePicker({ suggestedName: 'morph-pad-my-tones.json',
-        types: [{ description: 'Morph Pad tones', accept: { 'application/json': ['.json'] } }] });
+      if (!mineFile || pickNew) mineFile = await showSaveFilePicker({ suggestedName: 'morf-x-my-tones.json',
+        types: [{ description: 'MORF-X tones', accept: { 'application/json': ['.json'] } }] });
       if (mineFile.requestPermission && await mineFile.requestPermission({ mode: 'readwrite' }) !== 'granted') throw new Error('no permission');
       const w = await mineFile.createWritable(); await w.write(data); await w.close();
       mineFileName = mineFile.name;
@@ -664,7 +676,7 @@ async function saveMyTones(pickNew) {
 function download(data) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
-  a.download = mineFileName = 'morph-pad-my-tones.json'; a.click();
+  a.download = mineFileName = 'morf-x-my-tones.json'; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 async function loadMyTones(text, name) {
@@ -686,7 +698,7 @@ const loadMineFile = document.getElementById('loadMineFile');
 document.getElementById('loadMine').onclick = async () => {
   if (window.showOpenFilePicker) {
     try {
-      const [h] = await showOpenFilePicker({ types: [{ description: 'Morph Pad tones', accept: { 'application/json': ['.json'] } }] });
+      const [h] = await showOpenFilePicker({ types: [{ description: 'MORF-X tones', accept: { 'application/json': ['.json'] } }] });
       await loadMyTones(await (await h.getFile()).text(), h.name);
       mineFile = h; store.set('mineFile', h).catch(() => {});   // Save then writes back to this file
     } catch (e) { if (!e || e.name !== 'AbortError') loadMineFile.click(); }
