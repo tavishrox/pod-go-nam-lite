@@ -25,7 +25,15 @@ POD Go's own DSP as an amp block, with your effects either side of it.
 > the six-snapshot tiles are drawn from your own firmware's snapshot images.
 
 This is a fork of **[hx-stomp-nam-lite](https://github.com/nocaseguy/hx-stomp-nam-lite)** by Derek Bui,
-which does the same for the HX Stomp, HX Stomp XL and HX Effects: for those units, use Derek's project.
+which does the same for the HX Stomp, HX Stomp XL and HX Effects. For the HX Stomp and XL, use Derek's project.
+
+**Now including the HX Effects (3.80.0), fully tested.** The [setup page](https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/#build)
+also builds NAM A2 Lite for the HX Effects from your own stock `HX_Effects_v3.80.0_0xd97239907.hxf`: upstream's
+HX Effects build (Derek Bui; HX Effects port by Jerry Chuang and Scott), byte for byte, installed and played on
+an HX Effects by ToneShift. NAM is under **Distortion > Mono**, in Xenomorph Fuzz Mono's place; captures load as
+User IRs in HX Edit and are picked with the Model knob, up to three NAM blocks a preset. No run from RAM on the
+HX Effects. Recovery: hold **>** at power-on and install the stock file with Line 6 Updater. Notes:
+[docs/research/HX_EFFECTS_NAM.md](docs/research/HX_EFFECTS_NAM.md).
 
 ---
 

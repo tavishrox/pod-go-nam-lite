@@ -56,3 +56,20 @@ def test_snap6_code_matches_its_symbols():
     assert syms['sel_hook'] == snapshots6.CAVE_VA
     assert syms['img_recs'] - snapshots6.CAVE_VA == os.path.getsize(snapshots6.CODE_BIN)
     assert set(snapshots6.HOOKS) <= set(syms)
+
+
+def test_hx_effects_option_matches_build_py():
+    sys.path.insert(0, ROOT)
+    sys.path.insert(0, os.path.join(ROOT, 'tools'))
+    import build
+    import effects
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('test_firmware', os.path.join(ROOT, 'tests', 'test_firmware.py'))
+    tf = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tf)
+    assert js_value('HXFX_STOCK_MD5') == effects.STOCK_MD5
+    assert build.STOCK_MD5[js_value('HXFX_STOCK_MD5')] == 'HX_Effects'
+    assert js_value('HXFX_BUILT_MD5') == tf.BUILT_MD5['HX_EFFECTS_HXF']
+    assert js_value('HXFX_KERNEL_ARGS') == build.KERNEL['HX_Effects'][1:]
+    assert build.STEPS['HX_Effects'] == [['effects-eq']]
+    assert js_value('HXFX_OUT_NAME') == 'HX_Effects_v3.80.0_NAM_A2_Lite.hxf'

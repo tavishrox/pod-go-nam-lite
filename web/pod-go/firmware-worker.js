@@ -6,6 +6,7 @@
 //
 // Messages in:  { stock: ArrayBuffer, edition: bool, names: bool, snap6: bool }   (names: the Model knob shows the IR's name,
 //   podgo/model_names.py; snap6: hold MODE for six snapshots, podgo/snapshots6.py)
+//               { stock: ArrayBuffer, hxfx: true }   NAM A2 Lite for the HX Effects 3.80.0 (build.py, tools/effects.py)
 //               { stock: ArrayBuffer, only6: true }   six snapshots on stock 2.50, no NAM (snapshots6.make_image)
 //   (edition: the ToneShift Edition boot screens, art/nam-a2-edition/,
 //                                                       drawn over the boot screens of the user's own file)
@@ -34,6 +35,12 @@ var BUILT_MD5_SNAP6 = {"false,false": "61c901e7ef19af5881aeaa9830918038", "true,
 // six snapshots only: podgo/snapshots6.py's OUT_NAME and BUILT_MD5
 var OUT_NAME_ONLY6 = "POD_Go_v2.50.0_Snap6.hxf";
 var BUILT_MD5_ONLY6 = "d4fde819f6a64a74e51c0d0f03187975";
+// The HX Effects 3.80.0 (upstream's build.py, unit HX_Effects): its own stock file, kernel and steps.
+// tests/test_podgo_build.py keeps these equal to build.py, tools/effects.py and tests/test_firmware.py.
+var HXFX_STOCK_MD5 = "7c2ebdf1bffb6bcc5f89dda97f91e40c";
+var HXFX_BUILT_MD5 = "2efb98791581b67116ba82c5ecd30ea2";
+var HXFX_KERNEL_ARGS = ["--mid-sweep", "--effects"];
+var HXFX_OUT_NAME = "HX_Effects_v3.80.0_NAM_A2_Lite.hxf";
 var EDITION_SOURCES = ["podgo/splash.py", "art/nam-a2-edition/wired.png", "art/nam-a2-edition/wireless.png"];
 
 // What the build needs, relative to the repository root.
@@ -136,7 +143,8 @@ async function loadEdition(p) {
   editionLoaded = true;
 }
 
-async function build(stock, edition, names, snap6, only6) {
+async function build(stock, edition, names, snap6, only6, hxfx) {
+  if (hxfx) return buildHxfx(stock);
   var of = only6 ? 5 : 6;
   var outName = edition ? OUT_NAME_EDITION : OUT_NAME;
   if (names) outName = outName.replace(".hxf", "_Names.hxf");
@@ -155,7 +163,7 @@ async function build(stock, edition, names, snap6, only6) {
   var md5 = p.runPython("import hashlib; hashlib.md5(open('/repo/build/stock.hxf','rb').read()).hexdigest()");
   if (md5 !== STOCK_MD5) {
     try { p.FS.unlink("/repo/build/stock.hxf"); } catch (e) { /* gone */ }
-    throw new Error("WRONG_FILE " + md5);
+    throw new Error((md5 === HXFX_STOCK_MD5 ? "HXFX_FILE " : "WRONG_FILE ") + md5);
   }
   post({ type: "log", text: "stock firmware: POD Go 2.50 (MD5 " + md5 + ")\n" });
 
@@ -196,6 +204,49 @@ async function build(stock, edition, names, snap6, only6) {
   post({ type: "done", file: outName, bytes: buf, md5: outMd5, pinned: outMd5 === pinnedMd5, edition: !!edition, names: !!names, snap6: !!snap6, only6: !!only6 }, [buf]);
 }
 
+// NAM A2 Lite for the HX Effects 3.80.0: build.py's steps for that unit (no simulator check, as above).
+// No RAM run: the RAM loader is the HX Stomp's and the POD Go's, so `built` stays unset.
+async function buildHxfx(stock) {
+  var of = 7;
+  progress(1, of, "Loading the build tools (about 15 MB, once)…");
+  var p = await boot();
+  if (built) { try { p.FS.unlink("/repo/build/" + built); } catch (e) { /* gone */ } built = null; }
+  progress(2, of, "Checking your firmware file…");
+  p.FS.writeFile("/repo/build/stock.hxf", new Uint8Array(stock));
+  stock = null;
+  var md5 = p.runPython("import hashlib; hashlib.md5(open('/repo/build/stock.hxf','rb').read()).hexdigest()");
+  if (md5 !== HXFX_STOCK_MD5) {
+    try { p.FS.unlink("/repo/build/stock.hxf"); } catch (e) { /* gone */ }
+    throw new Error((md5 === STOCK_MD5 ? "PODGO_FILE " : "WRONG_HXFX ") + md5);
+  }
+  post({ type: "log", text: "stock firmware: HX Effects 3.80.0 (MD5 " + md5 + ")\n" });
+  var run = p.globals.get("run");
+  function step(n, text, argv) {
+    progress(n, of, text);
+    post({ type: "log", text: "$ " + argv.join(" ") + "\n" });
+    var out = run(p.toPy(argv));
+    post({ type: "log", text: out });
+    return out;
+  }
+  try {
+    step(3, "Building the NAM kernel…", ["tools/sharc/nam_multi.py"].concat(HXFX_KERNEL_ARGS, ["-o", "build/nam_lite.asm"]));
+    step(4, "Adding NAM A2 Lite to Distortion > Mono…", ["tools/patch_amp.py", "effects-eq", "build/stock.hxf", "build/nam_lite_0.l6ia"]);
+    step(5, "Adding the NAM kernel to the DSP program…", ["tools/patch_amp.py", "patch", "build/nam_lite_0.l6ia", "build/nam_lite.l6ia", "--asm", "build/nam_lite.asm"]);
+    var report = step(6, "Checking every checksum…", ["tools/l6ia_verify.py", "build/nam_lite.l6ia"]);
+    if (report.indexOf("ALL OK") < 0) throw new Error("The built image failed its checksum check.");
+    step(7, "Packing the file…", ["tools/hxf.py", "pack", "build/nam_lite.l6ia", "build/" + HXFX_OUT_NAME, "--donor", "build/stock.hxf"]);
+  } finally {
+    run.destroy();
+  }
+  var bytes = p.FS.readFile("/repo/build/" + HXFX_OUT_NAME);
+  var outMd5 = p.runPython("import hashlib; hashlib.md5(open('/repo/build/" + HXFX_OUT_NAME + "','rb').read()).hexdigest()");
+  ["nam_lite_0.l6ia", "nam_lite.l6ia", "nam_lite.asm", "stock.hxf", HXFX_OUT_NAME].forEach(function (f) {
+    try { p.FS.unlink("/repo/build/" + f); } catch (e) { /* gone */ }
+  });
+  var buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  post({ type: "done", file: HXFX_OUT_NAME, bytes: buf, md5: outMd5, pinned: outMd5 === HXFX_BUILT_MD5, hxfx: true }, [buf]);
+}
+
 // The RAM run of the last build: what tools/hxf_ram.py run would send. It checks the unit's eMMC
 // against the base given (stock or the installed build) before anything starts.
 async function plan(installed) {
@@ -233,7 +284,7 @@ self.onmessage = function (e) {
     });
     return;
   }
-  build(e.data.stock, e.data.edition, e.data.names, e.data.snap6, e.data.only6).catch(function (err) {
+  build(e.data.stock, e.data.edition, e.data.names, e.data.snap6, e.data.only6, e.data.hxfx).catch(function (err) {
     post({ type: "error", text: err && err.message ? err.message : String(err) });
   });
 };

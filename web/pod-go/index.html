@@ -35,6 +35,10 @@ a { color: var(--accent); }
 code { font-family: var(--mono); font-size: 0.9em; }
 .eyebrow { font: 500 12px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .lead { color: var(--muted); font-size: 18px; }
+.newpill { display: inline-flex; align-items: center; gap: 10px; margin: 4px 0 2px; padding: 8px 14px; border: 1px solid var(--accent);
+  border-radius: 999px; color: var(--ink); text-decoration: none; font-weight: 600; font-size: 15px; max-width: 100%; }
+.newpill b { background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 2px 9px; font-size: 12px; letter-spacing: .06em; }
+.newpill:hover, .newpill:focus-visible { background: var(--panel); }
 header { display: grid; gap: 14px; }
 .video { position: relative; aspect-ratio: 16 / 9; max-width: 100%; background: var(--lcd); border-radius: 10px; overflow: hidden;
   display: grid; place-items: center; color: var(--lcd-ink); font: 500 15px var(--mono); text-align: center; padding: 16px; }
@@ -100,9 +104,10 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
 <nav class="neon-nav" aria-label="Pages"><div class="in"><a class="neon-logo" href="index.html">ToneShift</a><div class="links"><a href="index.html" aria-current="page">Setup</a><a href="converter.html">Converter</a><a href="how-to.html">Guide</a><a href="https://github.com/tavishrox/pod-go-nam-lite">GitHub</a></div></div></nav>
 <div class="wrap">
   <header>
-    <div class="eyebrow">POD Go · POD Go Wireless · firmware 2.50</div>
+    <div class="eyebrow">POD Go · POD Go Wireless · firmware 2.50 · HX Effects 3.80.0</div>
     <h1>NAM A2 Lite for POD Go</h1>
     <span class="neon-tag">Your captures. Your POD Go.</span>
+    <div><a class="newpill" href="#build" id="hxfxnew"><b>NEW</b> Now including HX Effects, fully tested →</a></div>
     <p class="lead">Neural Amp Modeler captures of real amps and pedals, running on the POD Go's own DSP as an amp block, with your drives, delays and reverbs either side.</p>
     <div class="video" id="video">Launch video coming soon</div>
     <div class="cta">
@@ -137,6 +142,11 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
           <div class="kind" role="radiogroup" aria-label="What to build">
             <label class="opt"><input type="radio" name="fwkind" id="fwkindnam" value="nam" checked> <span><b>NAM A2 Lite</b>, with the options below</span></label>
             <label class="opt"><input type="radio" name="fwkind" id="fwkindsix" value="six"> <span><b>Six snapshots only</b>: stock 2.50 with six snapshots and nothing else (no NAM, Elektrik stays as it was) · <i>experimental</i>: tested on a POD Go</span></label>
+            <label class="opt"><input type="radio" name="fwkind" id="fwkindhxfx" value="hxfx"> <span><b>HX Effects: NAM A2 Lite</b> from stock HX Effects 3.80.0 · tested on an HX Effects by ToneShift · based on <a href="https://github.com/nocaseguy/hx-stomp-nam-lite">hx-stomp-nam-lite</a> (Derek Bui; HX Effects port by Jerry Chuang and Scott)</span></label>
+          </div>
+          <div class="s6info" id="hxfxinfo" hidden>
+            <p><b>For the HX Effects.</b> Drop Line 6's stock <code>HX_Effects_v3.80.0_0xd97239907.hxf</code> (about 4 MB). NAM A2 Lite appears under <b>Distortion &gt; Mono</b>, in place of Xenomorph Fuzz Mono (presets using that model open NAM instead; Xenomorph Fuzz Stereo stays). Up to three NAM blocks per preset. Captures go in User IR slots with HX Edit, picked with the <b>Model</b> knob; the knob pop-up shows the capture's name. HX Edit shows the block as "Xenomorph Fuzz".</p>
+            <p><b>No run from RAM</b> on the HX Effects: install it with Line 6 Updater. <b>Recovery:</b> hold <b>&gt;</b> while turning it on (update mode) and install the stock file with Line 6 Updater.</p>
           </div>
           <div class="namopts" id="namopts">
           <label class="opt"><input type="checkbox" id="fwedition"> <span><b>ToneShift Edition</b>: add the boot screen with ToneShift's "NAM A2 Edition" lettering, drawn over your POD Go's own boot screen</span></label>
@@ -156,9 +166,9 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
             <p>To copy or move a preset that uses 5 and 6, save it to the new slot on the POD Go itself.</p>
           </div>
           <label class="drop" id="fwdrop" tabindex="0" for="fwpick">
-            <strong>Drop POD_Go_v2.50.0_0x6e984472.hxf here</strong>
-            <span>or click to choose · about 45 MB · it stays on this computer</span>
-            <span>Always the stock file, even if your POD Go already runs a NAM build: every build starts from your own copy of Line 6's file, because their code can't be shared.</span>
+            <strong id="fwdroptitle">Drop POD_Go_v2.50.0_0x6e984472.hxf here</strong>
+            <span id="fwdropsize">or click to choose · about 45 MB · it stays on this computer</span>
+            <span>Always the stock file, even if your unit already runs a NAM build: every build starts from your own copy of Line 6's file, because their code can't be shared.</span>
           </label>
           <input type="file" id="fwpick" accept=".hxf" hidden>
           <div class="fwstatus" id="fwstatus" role="status" hidden></div>
@@ -183,7 +193,7 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
             <details><summary>Technical details</summary><pre id="ramLog"></pre></details>
           </div>
         </div>
-        <p class="small">The first build downloads the build tools (about 15 MB) and takes 30–90 seconds. Keep this tab open until it finishes. It checks your file's fingerprint first, and at the end compares the result with the build the project tested on a POD Go: it says <b>Verified</b> only when every byte matches.</p>
+        <p class="small">The first build downloads the build tools (about 15 MB) and takes 30–90 seconds. Keep this tab open until it finishes. It checks your file's fingerprint first, and at the end compares the result with the build the project tested on that unit: it says <b>Verified</b> only when every byte matches.</p>
         <details><summary>Prefer the command line?</summary>
         <pre>python3 -m venv .venv &amp;&amp; .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/python podgo/build_podgo.py POD_Go_v2.50.0_0x6e984472.hxf</pre>
@@ -231,11 +241,12 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
   <section aria-labelledby="rec">
     <h2 id="rec">Recovery</h2>
     <p>If the POD Go stops at the splash screen, or you want the normal firmware back: turn it off, <b>hold Page &gt; while you turn it on</b> (update mode), then install the stock 2.50 file with Line 6 Updater's Choose File. The mod never touches the bootloader, so this always works.</p>
+    <p><b>HX Effects:</b> turn it off, <b>hold &gt; (the right arrow) while you turn it on</b> (update mode), then install the stock <code>HX_Effects_v3.80.0_0xd97239907.hxf</code> with Line 6 Updater's Choose File. The bootloader is untouched here too.</p>
   </section>
 
   <footer>
     <p>Built on <a href="https://github.com/nocaseguy/hx-stomp-nam-lite">hx-stomp-nam-lite</a> by Derek Bui (HX Stomp, HX Stomp XL, HX Effects). <a href="https://www.neuralampmodeler.com">Neural Amp Modeler</a> by Steven Atkinson. POD Go port © 2026 Mark Daniels (TavishRox, ToneShift). GPL-3.0-or-later.</p>
-    <p>No Line 6 firmware, code, data or artwork is included, and no NAM captures. Tested on a POD Go Wireless; the wired POD Go uses the same firmware file.</p>
+    <p>No Line 6 firmware, code, data or artwork is included, and no NAM captures. Tested on a POD Go Wireless; the wired POD Go uses the same firmware file. The HX Effects build was installed and tested on an HX Effects.</p>
   </footer>
 </div>
 <script src="../ramrun.js"></script>
@@ -258,7 +269,12 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
   }
   function start(buf, name) {
     if (name && /\.nam$/i.test(name)) { status("bad", "That's a NAM capture, not firmware.", " Captures go on the converter page. Here, drop Line 6's firmware file (it ends in .hxf)."); return; }
-    if (buf.byteLength < 20e6 || buf.byteLength > 80e6) { status("bad", "That doesn't look like the POD Go firmware file.", " The stock file is about 45 MB and ends in .hxf."); return; }
+    var hxfx = $("fwkindhxfx").checked;
+    if (hxfx ? (buf.byteLength < 2e6 || buf.byteLength > 20e6) : (buf.byteLength < 20e6 || buf.byteLength > 80e6)) {
+      if (hxfx) status("bad", "That doesn't look like the HX Effects firmware file.", " The stock HX Effects 3.80.0 file is about 4 MB and ends in .hxf.");
+      else status("bad", "That doesn't look like the POD Go firmware file.", " The stock file is about 45 MB and ends in .hxf. For the HX Effects, choose the HX Effects option above.");
+      return;
+    }
     if (url) { URL.revokeObjectURL(url); url = null; }
     done.hidden = true; $("ram").hidden = true; log.textContent = ""; logbox.hidden = false; drop.classList.add("busy");
     status("work", "Building…", " Starting.");
@@ -271,11 +287,12 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
       else if (m.type === "done") {
         reset();
         window.podgoWorker = worker;
-        $("ram").hidden = false;
+        $("ram").hidden = !!m.hxfx;              // no RAM run on the HX Effects
         url = URL.createObjectURL(new Blob([m.bytes], { type: "application/octet-stream" }));
         save.href = url; save.download = m.file; done.hidden = false;
         var extra = m.names ? " with Model-knob names (experimental)" : "";
-        if (m.pinned && m.only6) status("ok", "Verified: your POD Go firmware with six snapshots (no NAM) is ready.", " It is byte for byte the project's six-snapshot build (MD5 " + m.md5 + "): stock 2.50 with six snapshots and nothing else, the same six-snapshot code that ran on a POD Go. Download it, then install it with Line 6 Updater (step 3).");
+        if (m.pinned && m.hxfx) status("ok", "Verified: your HX Effects firmware is ready.", " It is byte for byte the HX Effects NAM A2 Lite build (MD5 " + m.md5 + "), the build installed and tested on an HX Effects. Download it, then install it with Line 6 Updater (Choose File). NAM is under Distortion > Mono.");
+        else if (m.pinned && m.only6) status("ok", "Verified: your POD Go firmware with six snapshots (no NAM) is ready.", " It is byte for byte the project's six-snapshot build (MD5 " + m.md5 + "): stock 2.50 with six snapshots and nothing else, the same six-snapshot code that ran on a POD Go. Download it, then install it with Line 6 Updater (step 3).");
         else if (m.pinned && m.snap6) status("ok", "Verified: your POD Go firmware" + (m.edition ? " (ToneShift Edition)" : "") + " with six snapshots" + (m.names ? " and Model-knob names" : "") + " is ready.", " It is byte for byte the project's build with these options (MD5 " + m.md5 + "), experimental. Download it, then install it with Line 6 Updater (step 3).");
         else if (m.pinned && m.names) status("ok", "Verified: your POD Go firmware" + (m.edition ? " (ToneShift Edition)" : "") + extra + " is ready.", " It is byte for byte the project's build" + extra + " (MD5 " + m.md5 + "): the tested build plus a small display change that only alters the Model knob's text. Download it, then install it with Line 6 Updater (step 3).");
         else if (m.pinned && m.edition) status("ok", "Verified: your POD Go firmware (ToneShift Edition) is ready.", " It is byte for byte the project's ToneShift Edition build (MD5 " + m.md5 + "): the build tested on a POD Go plus the boot screen. Download it, then install it with Line 6 Updater (step 3).");
@@ -284,10 +301,13 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
       } else if (m.type === "error") {
         reset();
         if (m.text.indexOf("WRONG_FILE") === 0) status("bad", "This isn't the stock POD Go 2.50 firmware.", " Use Line 6's own POD_Go_v2.50.0_0x6e984472.hxf, unchanged (not a file built here). Its fingerprint is " + m.text.split(" ")[1] + ".");
+        else if (m.text.indexOf("HXFX_FILE") === 0) status("bad", "That's the HX Effects firmware.", " To build NAM for the HX Effects, choose the HX Effects option above and drop it again.");
+        else if (m.text.indexOf("PODGO_FILE") === 0) status("bad", "That's the POD Go firmware.", " The HX Effects option needs Line 6's stock HX_Effects_v3.80.0_0xd97239907.hxf. For the POD Go, choose one of the POD Go options above.");
+        else if (m.text.indexOf("WRONG_HXFX") === 0) status("bad", "This isn't the stock HX Effects 3.80.0 firmware.", " Use Line 6's own HX_Effects_v3.80.0_0xd97239907.hxf, unchanged (not a file built here, and only version 3.80.0). Its fingerprint is " + m.text.split(" ")[1] + ".");
         else status("bad", "The build stopped.", " Nothing was written. Check your internet connection (the tools download the first time) and try again; the technical details say what happened. " + m.text.slice(0, 300));
       }
     };
-    worker.postMessage({ stock: buf, edition: $("fwedition").checked, names: $("fwnames").checked, snap6: $("fwsnap6").checked, only6: $("fwkindsix").checked }, [buf]);
+    worker.postMessage({ stock: buf, edition: $("fwedition").checked, names: $("fwnames").checked, snap6: $("fwsnap6").checked, only6: $("fwkindsix").checked, hxfx: hxfx }, [buf]);
   }
   function fromFile(f) {
     if (!f) return;
@@ -298,11 +318,15 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; border-t
   }
   $("fwedition").addEventListener("change", function () { $("edprev").hidden = !this.checked; });
   function kind() {
-    var six = $("fwkindsix").checked;
-    $("namopts").hidden = six;
-    $("s6info").hidden = !(six || $("fwsnap6").checked);
+    var six = $("fwkindsix").checked, hxfx = $("fwkindhxfx").checked;
+    $("namopts").hidden = six || hxfx;
+    $("s6info").hidden = hxfx || !(six || $("fwsnap6").checked);
+    $("hxfxinfo").hidden = !hxfx;
+    $("fwdroptitle").textContent = "Drop " + (hxfx ? "HX_Effects_v3.80.0_0xd97239907.hxf" : "POD_Go_v2.50.0_0x6e984472.hxf") + " here";
+    $("fwdropsize").textContent = "or click to choose · about " + (hxfx ? "4" : "45") + " MB · it stays on this computer";
   }
-  ["fwsnap6", "fwkindnam", "fwkindsix"].forEach(function (id) { $(id).addEventListener("change", kind); });
+  ["fwsnap6", "fwkindnam", "fwkindsix", "fwkindhxfx"].forEach(function (id) { $(id).addEventListener("change", kind); });
+  $("hxfxnew").addEventListener("click", function () { $("fwkindhxfx").checked = true; kind(); });
   window.podgoBuild = start;                 // for testing: podgoBuild(arrayBuffer)
   pick.addEventListener("change", function () { fromFile(pick.files[0]); pick.value = ""; });
   drop.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick.click(); } });

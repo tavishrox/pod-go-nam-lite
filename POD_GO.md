@@ -6,6 +6,8 @@ DSP, as an amp block, next to everything the POD Go already does.
 
 This is a port of [hx-stomp-nam-lite](https://github.com/nocaseguy/hx-stomp-nam-lite) by Derek Bui,
 which does the same for the HX Stomp, HX Stomp XL and HX Effects. POD Go port by Mark Daniels (TavishRox, ToneShift).
+The setup page also builds upstream's HX Effects 3.80.0 build, tested on an HX Effects
+([HX Effects](#hx-effects) below).
 
 > **Unofficial and experimental.** Not affiliated with, endorsed by or supported by Line 6 or Yamaha
 > Guitar Group. Installing modified firmware is at your own risk and may void your warranty. Read
@@ -260,6 +262,9 @@ If the unit stops at the splash screen or an update fails:
 2. Hold **Page >** and turn it on: update mode.
 3. In Line 6 Updater, install the stock `POD_Go_v2.50.0_0x6e984472.hxf` with Choose File.
 
+On the HX Effects: hold **>** (the right arrow) at power-on instead, and install the stock
+`HX_Effects_v3.80.0_0xd97239907.hxf`.
+
 ## Building
 
 The easy way: the [setup page](https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/#build) builds it in your browser
@@ -284,6 +289,23 @@ It checks your file's MD5, builds the NAM code and runs it in a SHARC simulator 
 | Presets | All 128 user presets selected in turn, NAM loaded after each: its output never moved (largest change 3×10⁻¹⁰) |
 | DSP | NAM measured at 28.3% (median) of the 393.2 MHz DSP; heaviest admitted preset plays clean |
 | Install | Installed with Line 6 Updater; presets intact, NAM loads and plays |
+
+## HX Effects
+
+The setup page's **HX Effects: NAM A2 Lite** option builds upstream's HX Effects 3.80.0 build
+(`build.py`, `tools/effects.py`; Derek Bui, HX Effects port by Jerry Chuang and Scott) from your own stock
+`HX_Effects_v3.80.0_0xd97239907.hxf` (MD5 `7c2ebdf1bffb6bcc5f89dda97f91e40c`). The result is checked against
+upstream's pinned MD5 `2efb98791581b67116ba82c5ecd30ea2`; `python3 build.py HX_Effects_v3.80.0_0xd97239907.hxf`
+gives the same bytes.
+
+- **Tested:** installed with Line 6 Updater on an HX Effects and played (2026-11-16): NAM plays, Model switches
+  captures, presets with NAM save and reopen from HX Edit. The first run of this build on an HX Effects.
+- **Where:** Distortion > Mono, in Xenomorph Fuzz Mono's place (presets that used it open NAM). HX Edit shows the
+  block as "Xenomorph Fuzz". Up to three NAM blocks a preset; DSP use not measured on this unit.
+- **Captures:** the same `.wav` files as the POD Go, imported as User IRs in HX Edit.
+- **No run from RAM** (no RAM loader for this unit yet). Recovery: hold **>** at power-on, stock file, Line 6 Updater.
+
+Notes and the plan: [docs/research/HX_EFFECTS_NAM.md](docs/research/HX_EFFECTS_NAM.md).
 
 ## Known limits
 
