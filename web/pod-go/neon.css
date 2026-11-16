@@ -1,156 +1,137 @@
-/* ToneShift neon theme for the POD Go pages (after the Max McTavish neon theme v2).
-   Load it after each page's own <style>: it sets the shared tokens and restyles the shared parts.
-   Palette: night, panel, ink, pink, cyan; tape yellow is decoration only, never text. No orange or amber.
-   Motion: one small nudge on hover for cards and the video, then it stops; buttons lift 2px. */
+/* ToneShift theme for the POD Go pages: night, cyan and pink, toned down for a tool.
+   Load it after each page's own <style>: it sets the shared tokens and a few shared parts; the pages' own
+   layout (cards, steps, tables) stays as it is.
+   Palette: night background, cyan for actions and focus, pink for small accents only. No orange or amber.
+   Type: Space Grotesk for headings, the system sans for text, IBM Plex Mono for labels and numbers.
+   Motion: hover changes colour; buttons lift 1px; nothing tilts or wobbles. */
 
 /* ---------- tokens (three :root to win over each page's light and dark blocks) ---------- */
 :root:root:root {
-  --night: #110e24; --panel-hi: #2a2050; --pink: #ff6dbb; --cyan: #6bf4ef; --tape: #ffe45e;
-  --bg: #110e24; --panel: #1d1736; --card: #251d45; --ink: #f8f4ff; --muted: #c4bcdf; --rule: #403256;
-  --accent: #6bf4ef; --accent-ink: #110e24; --ok: #7ee08a; --warn: #ff6dbb; --bad: #ff5d7a;
-  --lcd: #0b0920; --lcd-ink: #6bf4ef; --sel: #3a2a6e; --pad: #0b0920; --c-nam: #ff6dbb;
-  --display: "Barlow Condensed", Impact, "Arial Narrow", sans-serif;
-  --marker: "Permanent Marker", "Brush Script MT", cursive;
+  --night: #100e1f; --panel-hi: #221d3d; --pink: #ec7bb6; --cyan: #5fe0db;
+  --bg: #100e1f; --panel: #17142b; --card: #1c1833; --ink: #ebe8f5; --muted: #a8a2c0; --rule: #2d2848;
+  --accent: #5fe0db; --accent-ink: #0c0a18; --ok: #7ed8a0; --warn: #ec7bb6; --bad: #f2667f;
+  --lcd: #0b0a17; --lcd-ink: #5fe0db; --sel: #2c2552; --pad: #0b0a17; --c-nam: #ec7bb6;
+  --display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --body: system-ui, -apple-system, "Segoe UI", Roboto, Arial, Helvetica, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   color-scheme: dark;
 }
 html { background: var(--night); }
-body { background: var(--night); color: var(--ink); }
-::selection { background: var(--pink); color: var(--night); }
-a { color: var(--cyan); }
-a:hover { color: var(--pink); }
+body { background: var(--night); color: var(--ink); font-family: var(--body); }
+::selection { background: #5fe0db55; color: var(--ink); }
+a { color: var(--cyan); text-underline-offset: 2px; }
+a:hover { color: #9cefeb; }
 
-/* ---------- nav: sticky, blurred, night ---------- */
+/* ---------- nav: sticky, quiet ---------- */
 .neon-nav { position: sticky; top: 0; z-index: 50; margin: -32px calc(-1 * max(16px, env(safe-area-inset-left, 0px))) 28px;
-  padding: 12px max(16px, env(safe-area-inset-left, 0px)); background: rgba(17, 14, 36, 0.82);
+  padding: 12px max(16px, env(safe-area-inset-left, 0px)); background: rgba(16, 14, 31, 0.85);
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--rule); }
-.neon-nav .in { max-width: 1040px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; justify-content: space-between; }
-.neon-logo { font: 26px/1 var(--marker); color: var(--pink); text-decoration: none; display: inline-block; transform: rotate(-3deg); }
-.neon-logo:hover { color: var(--pink); }
+.neon-nav .in { max-width: 1040px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: center; justify-content: space-between; }
+.neon-logo { display: inline-flex; align-items: center; gap: 8px; font: 600 18px/1 var(--display); letter-spacing: -0.01em;
+  color: var(--ink); text-decoration: none; }
+.neon-logo::before { content: ""; width: 12px; height: 12px; border-radius: 3px; background: linear-gradient(135deg, var(--pink), var(--cyan)); }
+.neon-logo:hover { color: var(--ink); }
 .neon-nav .links { display: flex; flex-wrap: wrap; gap: 4px 18px; }
-.neon-nav .links a { font: 700 13px/1.6 var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: #fff; text-decoration: none; }
-.neon-nav .links a:hover, .neon-nav .links a[aria-current="page"] { color: var(--pink); }
+.neon-nav .links a { font: 500 14px/1.8 var(--body); color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; }
+.neon-nav .links a:hover { color: var(--ink); }
+.neon-nav .links a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--cyan); }
 
 /* ---------- type ---------- */
-h1, h2, h3 { font-family: var(--display); }
-h1 { font-weight: 800; font-stretch: normal; text-transform: uppercase; line-height: 0.9; letter-spacing: 0.005em;
-  font-size: clamp(46px, 9vw, 92px); text-shadow: 4px 4px 0 var(--pink), 8px 8px 0 #6bf4ef55; margin-bottom: 6px; }
-h2 { font-weight: 800; font-stretch: normal; text-transform: uppercase; line-height: 1; font-size: clamp(30px, 4.6vw, 44px);
-  color: #fff; text-shadow: 3px 3px 0 var(--pink); display: inline-block; justify-self: start; width: fit-content;
-  transform: rotate(-1.5deg); transform-origin: left center; }
-.panel h2, .trybox h2, .card h2 { font-size: clamp(24px, 3.4vw, 30px); text-shadow: 2px 2px 0 var(--pink); }
-h3 { font-weight: 700; font-stretch: normal; text-transform: uppercase; letter-spacing: 0.03em; font-size: 20px; line-height: 1.1; }
-.eyebrow { font: 700 12px/1.2 var(--display); letter-spacing: 0.22em; text-transform: uppercase; color: var(--cyan); }
-.lead { color: var(--ink); opacity: 0.9; }
-.neon-tag { font: 28px/1.2 var(--marker); color: var(--pink); display: block; transform: rotate(-2deg); transform-origin: left center; margin: 2px 0 6px; }
-code { color: #ffd1ea; }
+h1, h2, h3 { font-family: var(--display); font-stretch: normal; color: var(--ink); }
+h1 { font-weight: 600; letter-spacing: -0.025em; line-height: 1.05; }
+h2 { font-weight: 600; letter-spacing: -0.015em; }
+h3 { font-weight: 600; letter-spacing: -0.005em; }
+.eyebrow { font: 500 12px/1.2 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--cyan); }
+.eyebrow a { color: inherit; }
+.lead { color: var(--ink); opacity: 0.88; }
+.neon-tag { display: block; font: 500 14px/1.4 var(--mono); color: var(--pink); margin: 4px 0 8px; }
+code { color: #f3b6d6; }
 
-/* ---------- hero backdrop: glow plus halftone dots ---------- */
+/* ---------- hero: a faint glow and grid ---------- */
 header { position: relative; }
 header::before { content: ""; position: absolute; inset: -40px -20px -20px; pointer-events: none; z-index: 0;
-  background: radial-gradient(circle at 75% 25%, #ff6dbb3a, transparent 55%), radial-gradient(circle at 10% 85%, #6bf4ef2b, transparent 50%); }
+  background: radial-gradient(circle at 80% 20%, #ec7bb614, transparent 50%), radial-gradient(circle at 10% 90%, #5fe0db12, transparent 50%); }
 header::after { content: ""; position: absolute; inset: -40px -20px -20px; pointer-events: none; z-index: 0;
-  background-image: radial-gradient(#ffffff14 1.2px, transparent 1.4px); background-size: 14px 14px;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 75%); mask-image: linear-gradient(90deg, transparent, #000 75%); }
+  background-image: linear-gradient(#ffffff08 1px, transparent 1px), linear-gradient(90deg, #ffffff08 1px, transparent 1px);
+  background-size: 32px 32px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 70%); mask-image: linear-gradient(90deg, transparent, #000 70%); }
 header > * { position: relative; z-index: 1; }
 
-/* ---------- buttons: outline cyan, solid cyan for the main one ---------- */
-.btn, button { font: 700 14px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; border-radius: 0;
-  padding: 12px 18px; border: 2px solid var(--cyan); background: var(--cyan); color: var(--night); cursor: pointer;
-  text-decoration: none; transition: transform 0.15s, background 0.15s, color 0.15s; }
-.btn.ghost, button.ghost { background: transparent; color: var(--cyan); border-color: var(--cyan); }
-.btn:hover:not(:disabled), button:hover:not(:disabled) { transform: translateY(-2px); }
-.btn.ghost:hover:not(:disabled), button.ghost:hover:not(:disabled) { color: var(--pink); border-color: var(--pink); }
-button.danger { background: transparent; color: var(--bad); border-color: var(--bad); }
+/* ---------- buttons ---------- */
+.btn, button { font: 600 14px/1 var(--body); letter-spacing: 0; text-transform: none; border-radius: 8px;
+  padding: 11px 16px; border: 1px solid var(--cyan); background: var(--cyan); color: var(--accent-ink); cursor: pointer;
+  text-decoration: none; transition: transform 0.15s, background 0.15s, color 0.15s, border-color 0.15s; }
+.btn.ghost, button.ghost { background: transparent; color: var(--ink); border-color: var(--rule); }
+.btn:hover:not(:disabled), button:hover:not(:disabled) { transform: translateY(-1px); }
+.btn.ghost:hover:not(:disabled), button.ghost:hover:not(:disabled) { color: var(--cyan); border-color: var(--cyan); }
+button.danger { background: transparent; color: var(--bad); border-color: #f2667f66; }
+button.danger:hover:not(:disabled) { border-color: var(--bad); }
 button:disabled, .btn:disabled { opacity: 0.4; cursor: default; }
-.tab { border-radius: 0; font: 700 13px/1 var(--display); letter-spacing: 0.06em; text-transform: uppercase;
-  border: 2px solid var(--rule); background: transparent; color: var(--ink); padding: 8px 11px; }
-.tab[aria-selected="true"] { border-color: var(--pink); background: var(--panel-hi); color: #fff; }
+.tab { border-radius: 6px; font: 500 13px/1 var(--body); text-transform: none;
+  border: 1px solid var(--rule); background: transparent; color: var(--muted); padding: 8px 11px; }
+.tab[aria-selected="true"] { border-color: var(--cyan); background: var(--panel-hi); color: var(--ink); }
 input, select, textarea { accent-color: var(--cyan); }
 input[type=text], input[type=number], select, textarea { background: var(--night) !important; color: var(--ink) !important;
-  border: 1px solid var(--rule) !important; border-radius: 0 !important; }
-input[type=text]:focus, input[type=number]:focus, select:focus, textarea:focus { outline: 2px solid var(--cyan); outline-offset: 1px; }
+  border: 1px solid var(--rule) !important; border-radius: 6px !important; }
+input[type=text]:focus, input[type=number]:focus, select:focus, textarea:focus { outline: 2px solid #5fe0db88; outline-offset: 1px; }
 :focus-visible { outline-color: var(--cyan); }
 
 /* ---------- notes ---------- */
-.note { border-left: 4px solid var(--pink); color: var(--muted); }
-.note b, .note strong { color: #fff; }
+.note { border-left: 3px solid var(--pink); color: var(--muted); }
+.note b, .note strong { color: var(--ink); }
 
-/* ---------- feature cards: cyan border, pink hard shadow, 1deg tilt ---------- */
-.grid > div { --r: 1deg; background: linear-gradient(135deg, #2a1b52, #14304a); border: 3px solid var(--cyan); border-radius: 0;
-  box-shadow: 6px 6px 0 var(--pink); transform: rotate(var(--r)); }
-.grid > div:nth-child(even) { --r: -1deg; }
-.grid > div p { color: var(--ink); opacity: 0.85; }
-
-/* ---------- tool panels: same frame, no tilt (they hold controls) ---------- */
-.panel, .trybox, .card, .fwstatus, .s6info { border-radius: 0 !important; }
-.panel, .trybox { background: var(--panel); border: 2px solid var(--cyan); box-shadow: 6px 6px 0 var(--pink); }
+/* ---------- cards and panels: thin border, soft depth ---------- */
+.grid > div { background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; transition: border-color 0.15s; }
+.grid > div:hover { border-color: #5fe0db55; }
+.grid > div h3 { color: var(--ink); }
+.panel, .trybox { background: var(--panel); border: 1px solid var(--rule); border-radius: 12px !important;
+  box-shadow: 0 1px 0 #ffffff06 inset, 0 10px 30px #00000033; }
+.card, .fwstatus, .s6info { border-radius: 10px !important; }
 .fwstatus { background: var(--panel); border-color: var(--rule); }
 .fwstatus.work { border-left-color: var(--cyan); }
 .s6info { border-left-color: var(--cyan); }
 
-/* ---------- steps: ticket stubs (pink edge, pink number, dashed perforation) ---------- */
-ol.steps > li { position: relative; background: var(--panel); border-left: 6px solid var(--pink); padding: 18px 16px 18px 12px; }
-ol.steps > li::before { border: 0; border-radius: 0; color: var(--pink); font: 800 30px/34px var(--display); }
-ol.steps > li::after { content: ""; position: absolute; left: 58px; top: 0; bottom: 0; border-right: 2px dashed #ffffff26; pointer-events: none; }
-ol.steps > li > * { padding-left: 10px; }
-ol.steps > li:hover { background: var(--panel-hi); }
+/* ---------- steps: the pages draw the numbers; tint them ---------- */
+ol.steps > li::before { border-color: var(--cyan); color: var(--cyan); font-family: var(--mono); }
 
-/* ---------- the video: taped and tilted, hard cyan shadow ---------- */
-.video { --r: -1.5deg; overflow: visible; border-radius: 0; border: 6px solid #fff; box-shadow: 10px 12px 0 var(--cyan);
-  transform: rotate(var(--r)); background: linear-gradient(135deg, var(--pink), var(--cyan)); color: var(--night); font-weight: 700; }
-.video::before, .video::after { content: ""; position: absolute; width: 90px; height: 26px; background: #ffe45ecc; top: -14px; z-index: 2; pointer-events: none; }
-.video::before { left: -26px; transform: rotate(-35deg); }
-.video::after { right: -26px; transform: rotate(35deg); }
+/* ---------- the video ---------- */
+.video { border: 1px solid var(--rule); border-radius: 12px;
+  background: linear-gradient(135deg, #ec7bb622, #5fe0db1f), var(--lcd); color: var(--muted); }
 
 /* ---------- tables, code, drop zones ---------- */
-.tbl, .tablewrap { border-radius: 0 !important; border-color: var(--rule) !important; }
-th { font: 700 12px/1.2 var(--display) !important; letter-spacing: 0.14em !important; color: var(--cyan) !important; background: var(--panel-hi) !important; }
+.tbl, .tablewrap { border-color: var(--rule) !important; }
+th { font: 500 11px/1.2 var(--mono) !important; letter-spacing: 0.1em !important; text-transform: uppercase;
+  color: var(--muted) !important; background: var(--panel-hi) !important; }
 td { border-bottom-color: var(--rule) !important; }
-pre { border-radius: 0 !important; background: #0b0920 !important; border-color: var(--rule) !important; }
-.drop { border-radius: 0 !important; border-color: var(--cyan) !important; background: #0b0920 !important; }
-.drop:hover, .drop.over, .drop:focus-visible { border-color: var(--pink) !important; }
-.drop strong { font-family: var(--display); text-transform: uppercase; letter-spacing: 0.04em; }
-.bar { background: var(--rule); border-radius: 0; }
-.bar i { border-radius: 0; }
+pre { background: #0b0a17 !important; border-color: var(--rule) !important; }
+.drop { border-color: #5fe0db66 !important; background: #0b0a17 !important; }
+.drop:hover, .drop.over, .drop:focus-visible { border-color: var(--cyan) !important; }
+.bar { background: var(--rule); }
 
 footer { color: var(--muted); border-top-color: var(--rule); }
 
-/* ---------- motion: one small nudge, then it stops ---------- */
-@keyframes neon-nudge {
-  0%   { transform: rotate(var(--r, 0deg)); }
-  35%  { transform: rotate(calc(var(--r, 0deg) - 1.2deg)) scale(1.012); }
-  70%  { transform: rotate(calc(var(--r, 0deg) + 0.6deg)) scale(1.012); }
-  100% { transform: rotate(var(--r, 0deg)) scale(1); }
-}
-.grid > div:hover, .video:hover { animation: neon-nudge 0.5s ease-out 1; }
 @media (prefers-reduced-motion: reduce) {
-  .grid > div:hover, .video:hover { animation: none; }
   .btn:hover, button:hover { transform: none !important; }
 }
 
 /* ---------- phone ---------- */
 @media (max-width: 760px) {
   .neon-nav { margin-bottom: 20px; }
-  .neon-logo { font-size: 22px; }
-  .neon-nav .links { gap: 2px 12px; }
-  .neon-nav .links a { font-size: 12px; }
-  .grid > div, .video { --r: 0deg; }
-  h2 { transform: rotate(-1deg); }
+  .neon-nav .links { flex-wrap: nowrap; gap: 14px; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .neon-nav .links::-webkit-scrollbar { display: none; }
+  .neon-nav .links a { font-size: 13px; white-space: nowrap; }
 }
 
 /* ---------- print (the install guide PDF): plain and light ---------- */
 @media print {
-  :root:root:root { --bg: #fff; --panel: #fff; --card: #fff; --ink: #111; --muted: #333; --rule: #bbb; --accent: #a3005a; --cyan: #006e6a; --pink: #a3005a; color-scheme: light; }
+  :root:root:root { --bg: #fff; --panel: #fff; --card: #fff; --ink: #111; --muted: #333; --rule: #bbb; --accent: #006e6a;
+    --cyan: #006e6a; --pink: #a3005a; color-scheme: light; }
   html, body { background: #fff !important; color: #111 !important; }
-  .neon-nav, header::before, header::after, .video::before, .video::after { display: none !important; }
-  h1, h2 { color: #111; text-shadow: none; transform: none; }
-  .grid > div, .panel, .trybox, .video { transform: none; box-shadow: none; background: #fff; border-color: #bbb; }
-  ol.steps > li { background: #fff; }
-  ol.steps > li::after { display: none; }
+  .neon-nav, header::before, header::after { display: none !important; }
+  h1, h2, h3 { color: #111; }
+  .grid > div, .panel, .trybox, .video { box-shadow: none; background: #fff; border-color: #bbb; }
   th { color: #111 !important; background: #eee !important; }
   pre, .drop { background: #f4f4f4 !important; }
   code { color: #111; }
-  .note b, .note strong, h3 { color: #111 !important; }   /* white on screen; would vanish on paper */
+  .note b, .note strong { color: #111 !important; }
 }
