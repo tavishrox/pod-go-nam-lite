@@ -292,7 +292,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
   <div class="drawer-grip" id="editGrip" title="Drag to resize"></div>
   <div class="drawer-head">
     <h2 id="editTitle">Edit the five tones</h2>
-    <div class="row"><button id="editWide" class="ghost" title="Wider or narrower">Widen</button><button id="editClose" class="ghost">Close</button></div>
+    <div class="row"><button id="editWide" class="ghost" title="Make the editor wider or narrower">Widen</button><button id="editClose" class="ghost">Close</button></div>
   </div>
   <div class="drawer-body">
     <p class="status" id="setSource"></p>
@@ -733,9 +733,15 @@ function setDrawerWidth(w) {
   w = Math.max(340, Math.min(window.innerWidth, Math.round(w)));
   editorEl.style.setProperty('--dw', w + 'px');
   try { localStorage.setItem('morfx-drawer-w', w); } catch (e) {}
+  wideLabel();
 }
+function wideLabel() {        // Widen when narrow, Narrow when wide
+  const wide = editorEl.getBoundingClientRect().width >= Math.round(window.innerWidth * 0.9) - 20;
+  document.getElementById('editWide').textContent = wide ? 'Narrow' : 'Widen';
+}
+window.addEventListener('resize', () => { if (!editorEl.hidden) wideLabel(); });
 try { const w = +localStorage.getItem('morfx-drawer-w'); if (w) editorEl.style.setProperty('--dw', w + 'px'); } catch (e) {}
-function openEditor() { editorEl.hidden = false; renderEdit(); }
+function openEditor() { editorEl.hidden = false; renderEdit(); wideLabel(); }
 function closeEditor() { editorEl.hidden = true; }
 document.getElementById('editOpen').onclick = () => editorEl.hidden ? openEditor() : closeEditor();
 document.getElementById('editClose').onclick = closeEditor;
