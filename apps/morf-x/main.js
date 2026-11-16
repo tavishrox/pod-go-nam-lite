@@ -7,8 +7,8 @@ const { pathToFileURL } = require('url');
 
 app.setName('MORF-X');
 
-// The units MORF-X knows (as in podgo-usb.js): POD Go, Helix, HX Stomp, HX Stomp XL.
-const LINE6 = 0x0e41, PRODUCTS = [0x424b, 0x4248, 0x4246, 0x4253];
+// The units MORF-X knows (as in podgo-usb.js): POD Go, Helix, HX Effects, HX Stomp, HX Stomp XL.
+const LINE6 = 0x0e41, PRODUCTS = [0x424b, 0x4248, 0x4245, 0x4246, 0x4253];
 const isUnit = d => d && d.vendorId === LINE6 && PRODUCTS.includes(d.productId);
 
 // app://morf-x/... serves ./web: a secure origin, so WebUSB, fetch() and IndexedDB work as on the website.

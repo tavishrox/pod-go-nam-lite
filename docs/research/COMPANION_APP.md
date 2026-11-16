@@ -203,3 +203,13 @@ x_max_y_max}}`, each region a `name` plus a value for every parameter. What it t
   state into the active snapshot's stored controller data (here snapshot 4: one value 0.68 -> 1.0, one 0 -> 7),
   as saving on the unit would; loading a blob alone (0x15) reproduces it exactly, apart from the order of the
   controller assignments in section 4.
+
+### HX Effects (2026-11-16, on the unit)
+
+- USB product **0x4245** ("HX Effects"). Same protocol; models follow Helix.sym.
+- Grid: 0 input, 1..8 path A, 9 looper (kind 7, HD2_LooperStereo), 10 split, 11 merge, path B from 12,
+  21 output; 0x2d refuses positions past 22 (status 255).
+- 0x1e: Simple Delay (position 5) Mix 0.40 -> 0.30 -> 0.40, echoed as notify 30, read back, restored exactly.
+- Librarian preset list in the Helix form ([{number: name}], setlist 0 from 0). Save not tried yet.
+- MORF-X: offered as "HX Effects", slots 1A1-1A8 and 1B1-1B9, Save hidden until tried; with no amp it picks
+  the first effect that's on and has tones (here Scream 808).

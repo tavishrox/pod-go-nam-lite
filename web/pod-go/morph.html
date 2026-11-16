@@ -152,7 +152,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
       <details class="menu">
         <summary class="btn ghost">About</summary>
         <div class="menu-body">
-          <div class="eyebrow">POD Go and Helix · HX Stomp to come · experiment</div>
+          <div class="eyebrow">POD Go, Helix and HX Effects · HX Stomp to come · experiment</div>
           <p>Drag the crosshair to blend a block between five tones: one in the centre, a different voicing in each corner. Every parameter of the model moves, knobs blend and switches change at the halfway point, and the block follows the glide, so a fast move becomes a smooth sweep.</p>
           <p class="note"><b>Saved only when you say.</b> Connected, the pad moves the block's parameters live, the way the device's own editor does. Nothing is saved until you press <b>Save to the preset</b>, which saves the preset that's loaded, in its own slot and name; until then, reloading it on the unit puts everything back. Quit the editor app (POD Go Edit or HX Edit) first<span class="web-only">; use Chrome or Edge on a computer</span>.</p>
           <p class="status">Pad: drag or tap · arrows nudge · <kbd>1</kbd>–<kbd>5</kbd> jump to a tone · double-click a tone's dot to edit it.</p>
@@ -270,7 +270,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
   </div>
 </aside>
 
-<script src="podgo-usb.js?v=2026-11-16d"></script>
+<script src="podgo-usb.js?v=2026-11-16e"></script>
 <script>
 'use strict';
 // ---- the five tones: keys as in the tone files, positions in pad space (x, y in [-1, 1], y up) ----
@@ -933,8 +933,8 @@ const NAM_MODEL = 27, NAM_ID = '*nam-a2-lite';
 const isHelix = () => !!(pg && pg.device && pg.device.family === 'helix');
 function posLabel(p) {         // POD Go: the slot number; Helix family: DSP, path and slot, e.g. 1A4
   if (!isHelix()) return String(p);
-  const d = Math.floor(p / 20) + 1, r = p % 20;
-  return r > 10 ? `${d}B${r - 10}` : `${d}A${r}`;
+  const d = Math.floor(p / 20) + 1, r = p % 20, b = pg.device.bStart || 11;
+  return r >= b ? `${d}B${r - b + 1}` : `${d}A${r}`;
 }
 function describe(info) {
   const m = isHelix() ? helixByModel[info.model] : (models && models[info.model]) || byModel[info.model];
@@ -947,7 +947,8 @@ async function scanNow(keepPos) {
   if (!pg) return;
   blocks = [];
   for (const p of pg.device && pg.device.slots || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
-    const info = await pg.slotInfo(p);
+    let info = null;
+    try { info = await pg.slotInfo(p); } catch (e) { if (pg && pg.link && pg.link.closed) throw e; }   // a position the unit doesn't have
     if (!info || info.kind !== 6) continue;
     const d = describe(info);
     const set = d.symbol && setFor(d.symbol);
@@ -959,7 +960,8 @@ async function scanNow(keepPos) {
   document.getElementById('pickLabel').textContent = 'Block';
   pickSel.innerHTML = blocks.map(b => `<option value="${b.pos}"${b.names ? '' : ' disabled'}>${posLabel(b.pos)} · ${escapeHtml(b.label)}${b.on ? '' : ' (off)'}` +
     (b.symbol && !setFor(b.symbol) ? ' · no tones yet' : '') + '</option>').join('');
-  const pick = blocks.find(b => b.pos === keepPos && b.names) || blocks.find(b => b.amp && b.names) || blocks.find(b => b.names);
+  const fx = b => b.names && b.on && b.symbol && setFor(b.symbol) && !/VolPan|HD2_Gain|Looper/.test(b.symbol);   // no amp (HX Effects): an effect that's on
+  const pick = blocks.find(b => b.pos === keepPos && b.names) || blocks.find(b => b.amp && b.names) || blocks.find(fx) || blocks.find(b => b.names);
   if (!pick) {
     connEl.innerHTML = `<b>Connected</b>, but no block the pad can use${models || isHelix() ? '' : ' (load the model names from POD Go Edit to use the others)'}.`;
     if (cur) cur.live = null;
@@ -1010,8 +1012,9 @@ document.getElementById('connect').onclick = async () => {
     connEl.textContent = `Connected to the ${pg.device.name}${pg.device.untested ? ' (not tried with MORF-X yet)' : ''}, preset ${c.preset + 1} "${c.name}" · reading the blocks…`;
     document.getElementById('connect').hidden = true;
     document.getElementById('disconnect').hidden = false;
-    document.getElementById('save').hidden = !!pg.device.untested;   // save (0x46) checked on the POD Go and a Helix Floor
-    document.getElementById('saveAsBtn').hidden = !!pg.device.untested;
+    const noSave = !!(pg.device.untested || pg.device.saveUntested);   // save (0x46) checked on the POD Go and a Helix Floor
+    document.getElementById('save').hidden = noSave;
+    document.getElementById('saveAsBtn').hidden = noSave;
     document.getElementById('refresh').hidden = false;
     await scan();
   } catch (e) {
