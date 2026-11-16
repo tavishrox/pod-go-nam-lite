@@ -373,7 +373,8 @@
   PodGo.prototype.settle = function (ms) { return sleep(ms); };
   PodGo.prototype.current = async function () {
     var r = await this.ed.request(CMD.CURRENT);
-    return { setlist: r.get(K.SETLIST), preset: r.get(K.PRESET), name: text(r.get(K.NAME) || new Uint8Array(0)) };
+    return { setlist: r.get(K.SETLIST), preset: r.get(K.PRESET), name: text(r.get(K.NAME) || new Uint8Array(0)),
+             edited: r.get(0x75) === true };   // 0x75: unsaved changes in the edit buffer
   };
   PodGo.prototype.presetList = async function (setlist) {
     var r = await this.lib.request(CMD.LIB_LIST, new Map([[K.SETLIST, setlist]]), 8000);

@@ -48,10 +48,20 @@ details.more > summary:hover { text-decoration: underline; }
 .savedlg h2 { font-size: 22px; }
 .savedlg .ctl { grid-template-columns: 70px minmax(0, 1fr); }
 .savedlg select, .savedlg input[type=text] { width: 100%; padding: 8px; font: inherit; }
+.conn-grid { display: grid; grid-template-columns: auto minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px 16px; align-items: end; }
+.field { display: grid; gap: 6px; min-width: 0; }
+.field > span { font: 500 11px/1 "IBM Plex Mono", monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.field select { width: 100%; min-width: 0; padding: 9px 8px; font: inherit; }
+.conn-btns { display: flex; gap: 8px; }
+.pair { display: grid; grid-template-columns: minmax(96px, 0.45fr) minmax(0, 1fr); gap: 6px; }
+.pair select[hidden] { display: none; }
+.pair:has(select[hidden]) { grid-template-columns: minmax(0, 1fr); }
+.conn-actions:not(:has(button:not([hidden]))) { display: none; }
+@media (max-width: 760px) { .conn-grid { grid-template-columns: minmax(0, 1fr); } }
 /* MORF-X lockup: the mark, the wordmark (silver MORF-, cyan X) and the tagline */
 .morfx { display: flex; align-items: center; gap: clamp(10px, 2vw, 16px); margin: 0;
   font: 400 clamp(26px, 4.6vw, 42px)/1 "Michroma", "Space Grotesk", sans-serif; letter-spacing: 0.03em; }
-.morfx img { width: clamp(40px, 6.5vw, 60px); height: auto; flex: none; }
+.morfx img { height: 0.86em; width: auto; flex: none; }
 .morfx .word { background: linear-gradient(180deg, #ffffff 0%, #e4e9f0 42%, #97a3b3 56%, #eef2f6 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent; white-space: nowrap; }
 .morfx .x { color: #5fe0db; -webkit-text-fill-color: #5fe0db; text-shadow: 0 0 18px #5fe0db66; }
@@ -172,13 +182,19 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
   </header>
 
   <section class="panel">
-    <div class="row">
-      <button id="connect">Connect your device</button>
-      <button id="disconnect" class="ghost" hidden>Disconnect</button>
-      <label class="chk"><span id="pickLabel">Tones for</span> <select id="pick"></select></label>
-      <button id="restore" class="ghost" hidden>Put the block back as it was</button>
+    <div class="conn-grid">
+      <div class="field"><span>Device</span>
+        <div class="conn-btns"><button id="connect">Connect your device</button><button id="disconnect" class="ghost" hidden>Disconnect</button></div>
+      </div>
+      <div class="field" id="presetField" hidden><span>Preset</span>
+        <div class="pair"><select id="plSetlist" aria-label="Setlist"></select><select id="plPreset" aria-label="Preset"></select></div>
+      </div>
+      <label class="field"><span id="pickLabel">Tones for</span><select id="pick"></select></label>
+    </div>
+    <div class="row conn-actions">
       <button id="save" hidden>Save to the preset</button>
       <button id="saveAsBtn" class="ghost" hidden>Save as…</button>
+      <button id="restore" class="ghost" hidden>Put the block back as it was</button>
       <button id="refresh" class="ghost" hidden>Refresh blocks</button>
     </div>
     <p class="status" id="conn">Not connected: the pad runs as a simulation.</p>
@@ -270,7 +286,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
   </div>
 </aside>
 
-<script src="podgo-usb.js?v=2026-11-16f"></script>
+<script src="podgo-usb.js?v=2026-11-16g"></script>
 <script>
 'use strict';
 // ---- the five tones: keys as in the tone files, positions in pad space (x, y in [-1, 1], y up) ----
@@ -1000,6 +1016,7 @@ function afterDisconnect() {
   document.getElementById('save').hidden = true;
   document.getElementById('saveAsBtn').hidden = true;
   document.getElementById('refresh').hidden = true;
+  plField.hidden = true;
   document.getElementById('restore').hidden = true; document.getElementById('grab').hidden = true;
   fillPicker(cur && cur.id);
 }
@@ -1017,6 +1034,7 @@ document.getElementById('connect').onclick = async () => {
     document.getElementById('saveAsBtn').hidden = noSave;
     document.getElementById('refresh').hidden = false;
     await scan();
+    await plInit();
   } catch (e) {
     if (pg) pg.close().catch(() => {});
     pg = null;
@@ -1161,12 +1179,57 @@ saDlg.addEventListener('close', () => {
   });
 });
 
+// ---- the preset picker: browse setlists and presets; picking one loads it on the unit ----
+const plField = document.getElementById('presetField'), plSetlist = document.getElementById('plSetlist'), plPreset = document.getElementById('plPreset');
+let plSetlists = [], plLists = {};
+async function plInit() {          // which setlists the unit has (asked one by one), then show the current preset
+  plSetlists = []; plLists = {};
+  if (isHelix()) {
+    for (let i = 0; i < 8; i++) {
+      try { const l = await q(() => pg.presetList(i)); if (l && l.length) { plSetlists.push(i); plLists[i] = l; } else break; }
+      catch (e) { break; }
+    }
+  }
+  plSetlist.innerHTML = plSetlists.map(i => `<option value="${i}">Setlist ${i + 1}</option>`).join('');
+  plSetlist.hidden = plSetlists.length < 2;
+  plField.hidden = false;
+  await plShowCurrent();
+}
+async function plFill(setlist, select) {
+  let list = plLists[setlist];
+  if (!list) { try { list = await q(() => pg.presetList(setlist)); } catch (e) { list = []; } plLists[setlist] = list; }
+  plPreset.innerHTML = list.length ? list.map(p => `<option value="${p.index}">${slotName(p.index)} · ${escapeHtml(p.name || '(empty)')}</option>`).join('')
+    : '<option value="">(no presets)</option>';
+  if (select !== undefined) plPreset.value = select;
+}
+async function plShowCurrent() {
+  if (!pg) return;
+  const c = await q(() => pg.current());
+  if (!plSetlist.hidden) plSetlist.value = c.setlist;
+  await plFill(isHelix() ? c.setlist : c.setlist, c.preset);
+}
+plSetlist.onchange = () => plFill(+plSetlist.value);      // browse: nothing loads until a preset is picked
+plPreset.onchange = async () => {
+  if (!pg || plPreset.value === '') return;
+  const preset = +plPreset.value;
+  let c; try { c = await q(() => pg.current()); } catch (e) { lost(e); return; }
+  const setlist = isHelix() && !plSetlist.hidden ? +plSetlist.value : c.setlist;
+  if (setlist === c.setlist && preset === c.preset) return;
+  if (c.edited && !confirm(`"${c.name}" (${slotName(c.preset)}) has unsaved changes on the unit.\n\nLoad ${slotName(preset)} anyway? The changes will be lost.`)) {
+    if (!plSetlist.hidden) plSetlist.value = c.setlist;
+    await plFill(c.setlist, c.preset); return;
+  }
+  armed = false;
+  connEl.textContent = `Loading ${slotName(preset)}…`;
+  try { await q(() => pg.select(preset, setlist)); } catch (e) { lost(e); }   // the unit's event 4 then rereads the blocks
+};
+
 function onNote(m) {
   if (!(m instanceof Map)) return;
   const ev = m.get(0x69), body = m.get(0x6a);
   if (ev === 4 && pg) {                         // another preset loaded on the unit
     const keep = cur && cur.live && cur.live.pos;
-    setTimeout(() => { if (pg) scan(keep).catch(lost); }, 300);
+    setTimeout(() => { if (pg) { scan(keep).catch(lost); plLists = {}; plShowCurrent().catch(() => {}); } }, 300);
     return;
   }
   if (ev !== 0x1e && ev !== 20 && pg) {         // something else changed on the unit (a block, a model…): look
