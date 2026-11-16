@@ -9,6 +9,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Michroma&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
+details.more { margin-top: 4px; }
+details.more > summary { cursor: pointer; width: fit-content; font: 500 13px/1.6 "IBM Plex Mono", monospace; color: var(--accent); list-style: none; }
+details.more > summary::-webkit-details-marker { display: none; }
+details.more[open] > summary { margin-bottom: 8px; }
+details.more > summary:hover { text-decoration: underline; }
 /* MORF-X lockup: the mark, the wordmark (silver MORF-, cyan X) and the tagline */
 .morfx { display: flex; align-items: center; gap: clamp(12px, 2.5vw, 20px); margin: 8px 0 6px;
   font: 400 clamp(36px, 8vw, 68px)/1 "Michroma", "Space Grotesk", sans-serif; letter-spacing: 0.03em; }
@@ -121,12 +126,15 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
       <button id="refresh" class="ghost" hidden>Refresh blocks</button>
     </div>
     <p class="status" id="conn">Not connected: the pad runs as a simulation.</p>
-    <div class="row">
-      <button id="symBtn" class="ghost">Load all model names from POD Go Edit…</button>
-      <input type="file" id="symFile" accept=".sym" hidden>
-      <span class="status" id="symStat"></span>
-    </div>
-    <p class="status">Default tones are Line 6's own Focus View presets, five per model, plus our own gentle sets for the EQs and two delays that have none: 514 of the POD Go's models in all, every one that suits morphing, and the pad recognises those blocks by itself. For cabs, loops and the other blocks, load the model list from your own copy of POD Go Edit (on a Mac: Applications › Line6 › POD Go Edit › Show Package Contents › Contents › Resources › <b>PodGo.sym</b>); it is read in this browser and kept there.</p>
+    <details class="more">
+      <summary>More…</summary>
+      <p class="status">Default tones are Line 6's Focus View presets for 514 POD Go models (ours for the EQs and two delays), and MORF-X recognises those blocks by itself. For cabs, loops and the rest, load the model list from POD Go Edit; on a Mac: Applications › Line6 › POD Go Edit › Show Package Contents › Contents › Resources › <b>PodGo.sym</b>. It stays in this browser.</p>
+      <div class="row">
+        <button id="symBtn" class="ghost">Load all model names from POD Go Edit…</button>
+        <input type="file" id="symFile" accept=".sym" hidden>
+        <span class="status" id="symStat"></span>
+      </div>
+    </details>
   </section>
 
   <div class="main">
