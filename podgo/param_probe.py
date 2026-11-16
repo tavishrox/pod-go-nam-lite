@@ -2,10 +2,12 @@
 """Set one knob of the POD Go's edit buffer live over USB: the command the Morph Pad needs
 (docs/research/COMPANION_APP.md, "Set one parameter").
 
-    python3 podgo/param_probe.py info                          what is at each grid position (read only, 0x2d)
+    python3 podgo/param_probe.py info [N]                      what is at grid positions 0..N-1 (read only, 0x2d)
     python3 podgo/param_probe.py listen [SECONDS]              print the notify stream (turn a knob on the unit)
     python3 podgo/param_probe.py set POS INDEX VALUE           one knob: grid position, parameter index, 0..1
     python3 podgo/param_probe.py sweep POS INDEX FROM TO SECS  glide one knob, 30 messages a second
+
+Another Line 6 unit: set HX_PID, e.g. HX_PID=0x4248 for a Helix Floor (0x4246 HX Stomp, 0x4253 XL).
 
 Edit buffer only: nothing is saved (the preset shows as edited; reload it to undo). POD Go Edit closed.
 
@@ -53,11 +55,11 @@ def main():
     a = sys.argv[1:]
     if not a:
         sys.exit(__doc__)
-    with hx_ctl.HxCtl(False, 8.0, 0x424b) as c:
+    with hx_ctl.HxCtl(False, 8.0, int(os.environ.get('HX_PID', '0x424b'), 0)) as c:
         cur = c.current()
         print(f"preset {cur['preset']} {cur['name']!r}")
         if a[0] == 'info':
-            for pos in range(12):
+            for pos in range(int(a[1]) if len(a) > 1 else 12):
                 try:
                     print(f'  {pos:2d}:', str(c.ed.request(CMD_OBJECT_INFO, {K_POS: pos}))[:400])
                 except hx_ctl.HxError as e:

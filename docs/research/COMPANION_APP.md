@@ -182,3 +182,18 @@ x_max_y_max}}`, each region a `name` plus a value for every parameter. What it t
   marked `source: "toneshift"`: gains within about ±3 dB, all inside POD Go Edit's ranges (`eq.models`, `delay.models`).
 - Now 514 of the 627 models have a set. The 113 without are cabs, FX loops, sends, returns, loopers, IRs and I/O.
 - NAM A2 Lite gets no set by design: it plays captures, so the pad only starts from the block as it is.
+
+### Helix Floor on the same protocol (2026-11-16, on the unit)
+
+- USB: vendor 0x0e41, product **0x4248** ("HELIX", USB 2). `hx_ctl.py --pid 0x4248 status` and
+  `HX_PID=0x4248 podgo/param_probe.py` work unchanged: same streams, services and MessagePack.
+- Model numbers are places in HX Edit's `Helix.sym` (833 models), as POD Go's are in `PodGo.sym`
+  (preset "JS-GrammGSGUltim": 778 HD2_AmpGSG100, 547 Heir Apparent, 774 1x12 Open Cast IR cab…).
+- 0x2d {0x62 pos} returns the same block shape as the POD Go ({13 pos, 24 {19 kind 6, 28 id,
+  20 {24 {25 model}, 9 category, 10 on, 11 {4 values}}}}). Grid positions: 20 per DSP;
+  0 input, 1..8 path A, 9 split, 10 merge, 11..18 path B, 19 output; DSP 2 is 20..39 the same way.
+  Block slots to scan: 1..8, 11..18, 21..28, 31..38.
+- 0x1e set-param: amp Drive at position 5, index 0, 0.79 -> 0.70 -> 0.79. Status 0, the unit echoes it as
+  notify 30 (0x1e), and 0x2d reads it back; restored exactly. Edit buffer only (the preset shows as edited).
+- So MORF-X needs: the Helix's product ID, the 32 slot positions, and its model list (Helix.sym order).
+  Save (0x46) not tried on the Helix yet.
