@@ -60,6 +60,7 @@ label.chk { display: flex; gap: 8px; align-items: center; font-size: 14px; color
 .weights { display: grid; gap: 6px; }
 .w { display: grid; grid-template-columns: 12px 92px minmax(0, 1fr) 44px; gap: 8px; align-items: center; font-size: 14px; }
 .dot { width: 12px; height: 12px; border-radius: 50%; }
+.tab .edited { color: var(--pink, #ff6dbb); margin-left: 4px; }
 .bar { height: 8px; border-radius: 4px; background: var(--rule); overflow: hidden; }
 .bar i { display: block; height: 100%; width: 0; border-radius: 4px; }
 .w b, .p b { font: 500 12px var(--mono); color: var(--muted); text-align: right; font-weight: 500; }
@@ -151,8 +152,20 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
     <div class="row">
       <button id="capture" class="ghost">Copy the current blend into this tone</button>
       <button id="grab" class="ghost" hidden>Copy the block's settings into this tone</button>
-      <button id="resetSet" class="ghost">Undo my changes to this model</button>
     </div>
+    <div class="row">
+      <button id="resetTone" class="ghost">Reset this tone to standard</button>
+      <button id="resetSet" class="ghost">Reset this model to standard</button>
+      <button id="resetAll" class="danger">Reset all my tones…</button>
+    </div>
+    <h3>My tones file</h3>
+    <div class="row">
+      <button id="saveMineBtn">Save my tones</button>
+      <button id="saveMineAs" class="ghost">Save as…</button>
+      <button id="loadMine" class="ghost">Load my tones…</button>
+      <input type="file" id="loadMineFile" accept=".json,application/json" hidden>
+    </div>
+    <p class="status" id="mineStat"></p>
     <div class="row">
       <button id="export" class="ghost">Export this model's tones (.json)</button>
       <button id="importBtn" class="ghost">Import tone files…</button>
@@ -216,7 +229,8 @@ let imported = {};          // symbol -> { set, category } from tone files the u
 let defaults = {};          // symbol -> { set, category } from focus-defaults.json (Line 6's Focus View tones)
 let byModel = [];           // the unit's model number -> { symbol, params } for the models in focus-defaults.json
 let mine = {};              // symbol -> set, the user's own edits
-const saveMine = () => store.set('mine', mine);
+const saveMine = () => { mineDirty = true; showMine(); return store.set('mine', mine); };
+let mineDirty = false, mineFile = null, mineFileName = '', mineSavedAt = '';
 
 // ---- the current set ----
 let cur = null;             // { id, label, set, source, names: [param names on the pad], live: null | {...} }
@@ -539,13 +553,14 @@ function showSource() {
     (cur.source === 'new' ? ' · no tones for this model yet, so all five start as the block is now.' : '') +
     ` · ${cur.names.length} parameters on the pad.`;
   document.getElementById('resetSet').disabled = !mine[cur.id];
+  document.getElementById('resetTone').disabled = !toneEdited(sel);
 }
 function renderTabs() {
   tabsEl.innerHTML = '';
   KEYS.forEach((key, k) => {
     const b = document.createElement('button');
     b.className = 'tab'; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', k === sel);
-    b.innerHTML = `<span class="dot" style="background:${SLOTS[k].colour}"></span>${k + 1} · ${escapeHtml(cur.set.regions[key].name)}`;
+    b.innerHTML = `<span class="dot" style="background:${SLOTS[k].colour}"></span>${k + 1} · ${escapeHtml(cur.set.regions[key].name)}${toneEdited(k) ? ' <span class="edited" title="Your own setting">✎</span>' : ''}`;
     b.onclick = () => selectTone(k);
     tabsEl.appendChild(b);
   });
@@ -586,7 +601,101 @@ document.getElementById('capture').onclick = () => {
   cur.names.forEach(n => { const v = vals[n]; cur.set.regions[key][n] = cur.kinds[n] === 'unit' ? Math.round(v * 100) / 100 : v; });
   saveMine(); renderEdit();
 };
+// ---- your own tones: per tone, per model, all; one file holds them all ----
+function standardSet() {      // what this model has without your edits
+  const id = cur.id;
+  return (imported[id] && imported[id].set) || (defaults[id] && defaults[id].set) || (id === GENERIC_ID ? GENERIC : null) ||
+    (cur.live ? setFromBlock(cur.live) : null);
+}
+function toneEdited(k) {
+  if (!mine[cur.id]) return false;
+  const std = standardSet(), key = KEYS[k];
+  if (!std) return true;
+  const a = cur.set.regions[key], b = std.regions[key] || {};
+  return a.name !== b.name || cur.names.some(n => regionValue(cur.set, key, n) !== regionValue(std, key, n));
+}
+document.getElementById('resetTone').onclick = () => {
+  const std = standardSet(), key = KEYS[sel];
+  if (!mine[cur.id] || !std) return;
+  mine[cur.id].regions[key] = structuredClone(std.regions[key]);
+  const same = KEYS.every((k, i) => !toneEdited(i)) &&
+    Object.keys(mine[cur.id].params).every(n => behaviour(mine[cur.id], n) === behaviour(std, n));
+  if (same) delete mine[cur.id];             // nothing of yours left in this model
+  saveMine(); reopen();
+};
 document.getElementById('resetSet').onclick = () => { delete mine[cur.id]; saveMine(); reopen(); };
+document.getElementById('resetAll').onclick = () => {
+  const n = Object.keys(mine).length;
+  if (!n || !confirm(`Reset all your tones (${n} model${n === 1 ? '' : 's'}) to standard?\n\nSave them to a file first if you might want them back.`)) return;
+  mine = {}; saveMine(); reopen();
+};
+
+const MY_KIND = 'podgo-morph-pad-my-tones';
+function myTonesJson() {
+  return JSON.stringify({ kind: MY_KIND, version: 1, saved: new Date().toISOString(), models: mine }, null, 2);
+}
+function showMine() {
+  const n = Object.keys(mine).length, el = document.getElementById('mineStat');
+  if (!el) return;
+  document.getElementById('resetAll').disabled = !n;
+  el.innerHTML = `Your own tones: <b>${n}</b> model${n === 1 ? '' : 's'}, kept in this browser. ` +
+    (mineFileName ? `File: <b>${escapeHtml(mineFileName)}</b>, saved ${escapeHtml(mineSavedAt)}` +
+      (mineDirty ? ' · <b>changed since</b>.' : '.') : 'Not saved to a file yet.');
+}
+async function saveMyTones(pickNew) {
+  const data = myTonesJson();
+  if (window.showSaveFilePicker) {             // Chrome and Edge: keep saving to the same file
+    try {
+      if (!mineFile || pickNew) mineFile = await showSaveFilePicker({ suggestedName: 'morph-pad-my-tones.json',
+        types: [{ description: 'Morph Pad tones', accept: { 'application/json': ['.json'] } }] });
+      if (mineFile.requestPermission && await mineFile.requestPermission({ mode: 'readwrite' }) !== 'granted') throw new Error('no permission');
+      const w = await mineFile.createWritable(); await w.write(data); await w.close();
+      mineFileName = mineFile.name;
+      store.set('mineFile', mineFile).catch(() => {});
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+      mineFile = null; download(data);
+    }
+  } else download(data);
+  mineSavedAt = new Date().toLocaleString(); mineDirty = false;
+  store.set('mineSaved', { name: mineFileName, at: mineSavedAt }).catch(() => {});
+  showMine();
+}
+function download(data) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+  a.download = mineFileName = 'morph-pad-my-tones.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+async function loadMyTones(text, name) {
+  let d;
+  try { d = JSON.parse(text); } catch (e) { d = null; }
+  if (!d || d.kind !== MY_KIND || typeof d.models !== 'object') {
+    alert("That isn't a My tones file. (For a single model's tone file, use Import tone files.)"); return;
+  }
+  let ok = 0;
+  Object.entries(d.models).forEach(([id, set]) => { const s = normalise(set); if (s) { mine[id] = s; ok++; } });
+  await saveMine();
+  mineFileName = name; mineSavedAt = d.saved ? new Date(d.saved).toLocaleString() : ''; mineDirty = false; showMine();
+  alert(`Loaded your tones for ${ok} model${ok === 1 ? '' : 's'}. Models not in the file are left as they were.`);
+  reopen();
+}
+document.getElementById('saveMineBtn').onclick = () => saveMyTones(false);
+document.getElementById('saveMineAs').onclick = () => saveMyTones(true);
+const loadMineFile = document.getElementById('loadMineFile');
+document.getElementById('loadMine').onclick = async () => {
+  if (window.showOpenFilePicker) {
+    try {
+      const [h] = await showOpenFilePicker({ types: [{ description: 'Morph Pad tones', accept: { 'application/json': ['.json'] } }] });
+      await loadMyTones(await (await h.getFile()).text(), h.name);
+      mineFile = h; store.set('mineFile', h).catch(() => {});   // Save then writes back to this file
+    } catch (e) { if (!e || e.name !== 'AbortError') loadMineFile.click(); }
+  } else loadMineFile.click();
+};
+loadMineFile.onchange = async () => {
+  const f = loadMineFile.files[0]; loadMineFile.value = '';
+  if (f) await loadMyTones(await f.text(), f.name);
+};
 document.getElementById('export').onclick = () => {
   const out = Object.assign({ symbol: cur.id.startsWith('*') ? undefined : cur.id }, cur.set);
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
@@ -852,9 +961,13 @@ function onNote(m) {
     models = (await store.get('models')) || null;
     imported = (await store.get('imported')) || {};
     mine = (await store.get('mine')) || {};
+    mineFile = (await store.get('mineFile')) || null;
+    const ms = (await store.get('mineSaved')) || {};
+    mineFileName = ms.name || ''; mineSavedAt = ms.at || '';
   } catch (e) {}
   showSym();
   fillPicker(null);
+  showMine();
   requestAnimationFrame(frame);
 })();
 </script>
