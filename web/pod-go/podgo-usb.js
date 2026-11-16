@@ -31,8 +31,8 @@
     { vendorId: 0x0E41, productId: 0x4248, name: "Helix", family: "helix", bStart: 11,
       slots: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 26, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38] },
     // HX Effects (2026-11-16, on the unit): 1..8 path A, 9 looper, 10 split, 11 merge, path B from 12, 21 output;
-    // reading blocks and setting a knob checked, saving not yet.
-    { vendorId: 0x0E41, productId: 0x4245, name: "HX Effects", family: "helix", bStart: 12, saveUntested: true,
+    // reading blocks, setting a knob and saving (0x46) checked.
+    { vendorId: 0x0E41, productId: 0x4245, name: "HX Effects", family: "helix", bStart: 12,
       slots: [1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19, 20] },
     { vendorId: 0x0E41, productId: 0x4246, name: "HX Stomp", family: "helix", bStart: 11, untested: true,
       slots: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18] },

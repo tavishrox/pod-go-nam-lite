@@ -213,3 +213,7 @@ x_max_y_max}}`, each region a `name` plus a value for every parameter. What it t
 - Librarian preset list in the Helix form ([{number: name}], setlist 0 from 0). Save not tried yet.
 - MORF-X: offered as "HX Effects", slots 1A1-1A8 and 1B1-1B9, Save hidden until tried; with no amp it picks
   the first effect that's on and has tones (here Scream 808).
+- Save (0x46) works on the HX Effects too ("Good Ole' Rock", setlist 0 slot 26): Mix 0.40 -> 0.35 saved and
+  kept after a reload; the backup restored every block value. As on the Helix, a save records live state in
+  the active snapshot: snapshot 1's on/off list (22 entries, one per grid position) took entry 11, the split,
+  as on. No effect on the sound with path B empty. Save is now on for the HX Effects in MORF-X.
