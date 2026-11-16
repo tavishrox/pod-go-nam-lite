@@ -425,6 +425,27 @@
     var v = typeof value === "boolean" ? value : asInt ? Math.round(value) : new F32(value);
     return this.ed.request(CMD.SET_PARAM, new Map([[0x62, pos], [0x1d, true], [0x1a, 0], [0x1c, index], [0x77, v]]));
   };
+  // Several knob changes in one go: write every request, then read the replies in order. In a browser each USB
+  // transfer costs a millisecond or two, so not waiting between requests saves most of the time. Checked on a
+  // Helix Floor (2026-11-16): up to 8 outstanding, every reply in order and status 0. items: [[pos, index, value, asInt]].
+  PodGo.prototype.setParams = async function (items) {
+    var ch = this.ed, ms = 5000;
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i], value = it[2];
+      var v = typeof value === "boolean" ? value : it[3] ? Math.round(value) : new F32(value);
+      ch.seq = (ch.seq + 1) & 0xFFFF;
+      var req = new Map([[K.SEQ, ch.seq], [K.CMD, CMD.SET_PARAM],
+        [K.PARAMS, new Map([[0x62, it[0]], [0x1d, true], [0x1a, 0], [0x1c, it[1]], [0x77, v]])]]);
+      var body = MP.encode(req), hdr = new Uint8Array(8), dv = new DataView(hdr.buffer);
+      dv.setUint16(0, 1, true); dv.setUint16(2, ch.svc, true); dv.setUint32(4, body.length, true);
+      await ch.writeMsg(concat([hdr, body]), ms);
+    }
+    for (var j = 0; j < items.length; j++) {
+      var rep = MP.decode((await ch.readMsg(ms)).body);
+      var st = rep.get(K.STATUS);
+      if (st !== 0 && st !== 1) throw fail("command 0x1e refused (status " + st + ")");
+    }
+  };
   PodGo.prototype.close = async function () {
     for (var c of [this.lib, this.nf, this.ed]) if (c) await c.st.fin();
     await sleep(200);

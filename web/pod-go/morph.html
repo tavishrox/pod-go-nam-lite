@@ -197,7 +197,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
   </section>
 </div>
 
-<script src="podgo-usb.js?v=2026-11-16b"></script>
+<script src="podgo-usb.js?v=2026-11-16c"></script>
 <script>
 'use strict';
 // ---- the five tones: keys as in the tone files, positions in pad space (x, y in [-1, 1], y up) ----
@@ -495,7 +495,7 @@ function frac(n, v) {
 
 // ---- output: send only changes, one message at a time, at most 30 batches a second ----
 const SEND_HZ = 30;
-const maxBatch = () => pg && pg.device && pg.device.family === 'helix' ? 4 : 6;   // Helix answers in ~15 ms: smaller, quicker steps
+const maxBatch = () => 6;   // Helix family: the six go out together (setParams), so a step stays quick
 let rtt = 0;                                   // average time the unit takes to answer one knob change (ms)
 let lastSent = {}, lastSendT = 0, sentWindow = [], lastMsg = '—';
 let pg = null, armed = false, busy = false, unitMsg = '';
@@ -535,7 +535,14 @@ function send(vals, now) {
   const target = cur;
   q(async () => {
     try {
-      for (const [n, v] of changes) {
+      if (pg.setParams && pg.device && pg.device.family === 'helix') {   // all of this step's changes in one go
+        const t0 = performance.now();
+        changes.forEach(([n]) => sentAt[n] = t0);
+        await pg.setParams(changes.map(([n, v]) => { const [dv, asInt] = toUnit(target.live, n, v); return [target.live.pos, target.live.index[n], dv, asInt]; }));
+        const dt = (performance.now() - t0) / changes.length; rtt = rtt ? rtt * 0.9 + dt * 0.1 : dt;
+        const now2 = performance.now();
+        changes.forEach(([n, v]) => { lastSent[n] = v; sentWindow.push(now2); lastMsg = `${n} = ${fmt(n, v)}`; });
+      } else for (const [n, v] of changes) {
         if (cur !== target || !pg) break;      // block changed or disconnected meanwhile
         sentAt[n] = performance.now();
         const [dv, asInt] = toUnit(target.live, n, v);
