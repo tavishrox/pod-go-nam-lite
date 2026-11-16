@@ -899,7 +899,7 @@ document.getElementById('connect').onclick = async () => {
     connEl.textContent = `Connected to the ${pg.device.name}${pg.device.untested ? ' (not tried with MORF-X yet)' : ''}, preset ${c.preset + 1} "${c.name}" · reading the blocks…`;
     document.getElementById('connect').hidden = true;
     document.getElementById('disconnect').hidden = false;
-    document.getElementById('save').hidden = pg.device.family !== 'podgo';   // saving not yet tried on the Helix family
+    document.getElementById('save').hidden = !!pg.device.untested;   // save (0x46) checked on the POD Go and a Helix Floor
     document.getElementById('refresh').hidden = false;
     await scan();
   } catch (e) {

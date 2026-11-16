@@ -197,3 +197,9 @@ x_max_y_max}}`, each region a `name` plus a value for every parameter. What it t
   notify 30 (0x1e), and 0x2d reads it back; restored exactly. Edit buffer only (the preset shows as edited).
 - So MORF-X needs: the Helix's product ID, the 32 slot positions, and its model list (Helix.sym order).
   Save (0x46) not tried on the Helix yet.
+- Save (0x46 {0x6b setlist, 0x6c slot, 0x6d name + NUL}) works on the Helix Floor (2026-11-16, preset
+  "Solo Gig Suss HB", setlist 2 slot 1): amp Drive 0.29 -> 0.34, saved, reloaded with 0.34, same name and slot.
+  Restored from a backup blob (0x15, then 0x46): every block value back. A save also writes the unit's live
+  state into the active snapshot's stored controller data (here snapshot 4: one value 0.68 -> 1.0, one 0 -> 7),
+  as saving on the unit would; loading a blob alone (0x15) reproduces it exactly, apart from the order of the
+  controller assignments in section 4.
