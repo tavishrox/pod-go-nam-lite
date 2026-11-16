@@ -217,3 +217,4 @@ x_max_y_max}}`, each region a `name` plus a value for every parameter. What it t
   kept after a reload; the backup restored every block value. As on the Helix, a save records live state in
   the active snapshot: snapshot 1's on/off list (22 entries, one per grid position) took entry 11, the split,
   as on. No effect on the sound with path B empty. Save is now on for the HX Effects in MORF-X.
+- Preset picker (load a preset from MORF-X): tried by the owner on the HX Effects, 2026-11-16; works.
