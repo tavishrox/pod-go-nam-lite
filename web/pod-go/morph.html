@@ -212,7 +212,7 @@ const GENERIC = (() => {
              ['High Push', [6.5, 4.0, 5.5, 8.0, 7.5, 5.5, 6.0]]];
   const regions = {};
   KEYS.forEach((k, i) => { regions[k] = { name: t[i][0] }; names.forEach((n, j) => regions[k][n] = t[i][1][j] / 10); });
-  return { modelName: 'Any amp (starter tones)', params: Object.fromEntries(names.map(n => [n, { behavior: 'interpolate' }])), regions };
+  return { modelName: 'Any amp (default tones)', params: Object.fromEntries(names.map(n => [n, { behavior: 'interpolate' }])), regions };
 })();
 
 // ---- storage (IndexedDB; memory only where the browser refuses) ----
@@ -251,7 +251,7 @@ let sel = 0;
 function prettySymbol(s) { return String(s || '').replace(/^HD2_/, '').replace(/([a-z])([A-Z0-9])/g, '$1 $2'); }
 function setFor(id) { return mine[id] || (imported[id] && imported[id].set) || (defaults[id] && defaults[id].set) || (id === GENERIC_ID ? GENERIC : null); }
 function sourceOf(id) {
-  return mine[id] ? 'your edits' : imported[id] ? 'imported tone file' : defaults[id] ? (defaults[id].ours ? 'our starter tones' : "Line 6's Focus View defaults") : id === GENERIC_ID ? 'starter tones' : 'new';
+  return mine[id] ? 'your edits' : imported[id] ? 'imported tone file' : defaults[id] ? (defaults[id].ours ? 'our starter tones' : "Line 6's Focus View defaults") : id === GENERIC_ID ? 'default tones (any amp)' : 'new';
 }
 function categoryOf(id) { return imported[id] ? imported[id].category : defaults[id] ? defaults[id].category : 'yours'; }
 function labelOf(id) {
@@ -767,13 +767,13 @@ function fillPicker(keepId) {
   pickSel.innerHTML = `<option value="${GENERIC_ID}">${escapeHtml(GENERIC.modelName)}</option>` +
     Object.keys(groups).sort().map(g => `<optgroup label="${escapeHtml(g)}">` +
       groups[g].sort((x, y) => labelOf(x).localeCompare(labelOf(y))).map(id => `<option value="${escapeHtml(id)}">${escapeHtml(labelOf(id))}</option>`).join('') + '</optgroup>').join('');
-  const id = keepId && setFor(keepId) ? keepId : defaults.HD2_AmpLine6Elektrik ? 'HD2_AmpLine6Elektrik' : GENERIC_ID;
+  const id = keepId && setFor(keepId) ? keepId : GENERIC_ID;          // not connected: the any-amp default tones
   pickSel.value = id;
-  useSet(id, id === GENERIC_ID ? 'Starter tones' : labelOf(id), null);
+  useSet(id, id === GENERIC_ID ? 'Default tones' : labelOf(id), null);
 }
 pickSel.onchange = () => {
   if (pg) { const b = blocks.find(b => b.pos === +pickSel.value); if (b) chooseBlock(b); return; }
-  const id = pickSel.value; useSet(id, id === GENERIC_ID ? 'Starter tones' : labelOf(id), null);
+  const id = pickSel.value; useSet(id, id === GENERIC_ID ? 'Default tones' : labelOf(id), null);
 };
 
 const STD_NAMES = ['Drive', 'Bass', 'Mid', 'Treble', 'Presence', 'ChVol', 'Master'];   // the commonest amp order
@@ -821,7 +821,7 @@ function chooseBlock(b) {
   if (b.model === NAM_MODEL) {                 // on the NAM firmware this slot is NAM A2 Lite, not Elektrik
     id = NAM_ID; label = 'NAM A2 Lite (or Elektrik)'; live.nam = true;
   }
-  else if (!id) { id = GENERIC_ID; label = 'Starter tones'; }            // no model list: an amp, the usual knobs
+  else if (!id) { id = GENERIC_ID; label = 'Default tones'; }            // no model list: an amp, the usual knobs
 
   useSet(id, label, live);
   connEl.innerHTML = `<b>Connected</b> · ${escapeHtml(label)} in slot ${b.pos}` +
