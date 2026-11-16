@@ -27,16 +27,16 @@
   // slots: grid positions that hold blocks. Helix: 20 per DSP (1..8 path A, 11..18 path B), checked on a
   // Helix Floor 2026-11-16. HX Stomp: one DSP laid out the same way (not yet tried from the browser).
   var DEVICES = [
-    { vendorId: 0x0E41, productId: 0x424B, name: "POD Go", family: "podgo", slots: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] },
-    { vendorId: 0x0E41, productId: 0x4248, name: "Helix", family: "helix", bStart: 11,
+    { vendorId: 0x0E41, productId: 0x424B, name: "POD Go", image: "devices/podgo.webp", family: "podgo", slots: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] },
+    { vendorId: 0x0E41, productId: 0x4248, name: "Helix", image: "devices/helixfloor.webp", family: "helix", bStart: 11,
       slots: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 26, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38] },
     // HX Effects (2026-11-16, on the unit): 1..8 path A, 9 looper, 10 split, 11 merge, path B from 12, 21 output;
     // reading blocks, setting a knob and saving (0x46) checked.
-    { vendorId: 0x0E41, productId: 0x4245, name: "HX Effects", family: "helix", bStart: 12,
+    { vendorId: 0x0E41, productId: 0x4245, name: "HX Effects", image: "devices/hxfx.webp", family: "helix", bStart: 12,
       slots: [1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19, 20] },
-    { vendorId: 0x0E41, productId: 0x4246, name: "HX Stomp", family: "helix", bStart: 11, untested: true,
+    { vendorId: 0x0E41, productId: 0x4246, name: "HX Stomp", image: "devices/stomp.webp", family: "helix", bStart: 11, untested: true,
       slots: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18] },
-    { vendorId: 0x0E41, productId: 0x4253, name: "HX Stomp XL", family: "helix", bStart: 11, untested: true,
+    { vendorId: 0x0E41, productId: 0x4253, name: "HX Stomp XL", image: "devices/stompxl.webp", family: "helix", bStart: 11, untested: true,
       slots: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18] }
   ];
   var RX_BUF = 0x1000, HB_MS = 1000;

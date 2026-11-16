@@ -58,6 +58,14 @@ details.more > summary:hover { text-decoration: underline; }
 .pair:has(select[hidden]) { grid-template-columns: minmax(0, 1fr); }
 .conn-actions:not(:has(button:not([hidden]))) { display: none; }
 @media (max-width: 760px) { .conn-grid { grid-template-columns: minmax(0, 1fr); } }
+.panel.conn { grid-template-columns: minmax(0, 1fr); align-items: center; }
+.panel.conn:has(#unitPic:not([hidden])) { grid-template-columns: clamp(140px, 24%, 380px) minmax(0, 1fr); column-gap: 22px; }
+.in-app .wrap { max-width: min(1680px, 100%); }   /* the app grows with its window; the website keeps its column */
+.conn-body { display: grid; gap: 14px; min-width: 0; }
+.unit-pic { margin: 0; display: grid; gap: 6px; justify-items: center; }
+.unit-pic img { width: 100%; height: auto; display: block; filter: drop-shadow(0 14px 22px #000a); }
+.unit-pic figcaption { font: 500 11px/1 "IBM Plex Mono", monospace; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+@media (max-width: 760px) { .panel.conn:has(#unitPic:not([hidden])) { grid-template-columns: minmax(0, 1fr); } .unit-pic img { max-width: 280px; } }
 /* MORF-X lockup: the mark, the wordmark (silver MORF-, cyan X) and the tagline */
 .morfx { display: flex; align-items: center; gap: clamp(10px, 2vw, 16px); margin: 0;
   font: 400 clamp(26px, 4.6vw, 42px)/1 "Michroma", "Space Grotesk", sans-serif; letter-spacing: 0.03em; }
@@ -181,32 +189,35 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
     </div>
   </header>
 
-  <section class="panel">
-    <div class="conn-grid">
-      <div class="field"><span>Device</span>
-        <div class="conn-btns"><button id="connect">Connect your device</button><button id="disconnect" class="ghost" hidden>Disconnect</button></div>
+  <section class="panel conn">
+    <figure class="unit-pic" id="unitPic" hidden><img id="unitImg" alt=""><figcaption id="unitName"></figcaption></figure>
+    <div class="conn-body">
+      <div class="conn-grid">
+        <div class="field"><span>Device</span>
+          <div class="conn-btns"><button id="connect">Connect your device</button><button id="disconnect" class="ghost" hidden>Disconnect</button></div>
+        </div>
+        <div class="field" id="presetField" hidden><span>Preset</span>
+          <div class="pair"><select id="plSetlist" aria-label="Setlist"></select><select id="plPreset" aria-label="Preset"></select></div>
+        </div>
+        <label class="field"><span id="pickLabel">Tones for</span><select id="pick"></select></label>
       </div>
-      <div class="field" id="presetField" hidden><span>Preset</span>
-        <div class="pair"><select id="plSetlist" aria-label="Setlist"></select><select id="plPreset" aria-label="Preset"></select></div>
+      <div class="row conn-actions">
+        <button id="save" hidden>Save to the preset</button>
+        <button id="saveAsBtn" class="ghost" hidden>Save as…</button>
+        <button id="restore" class="ghost" hidden>Put the block back as it was</button>
+        <button id="refresh" class="ghost" hidden>Refresh blocks</button>
       </div>
-      <label class="field"><span id="pickLabel">Tones for</span><select id="pick"></select></label>
+      <p class="status" id="conn">Not connected: the pad runs as a simulation.</p>
+      <details class="more">
+        <summary>More…</summary>
+        <p class="status">Default tones are Line 6's Focus View presets for 514 POD Go models (ours for the EQs and two delays), and MORF-X recognises those blocks by itself. For cabs, loops and the rest, load the model list from POD Go Edit; on a Mac: Applications › Line6 › POD Go Edit › Show Package Contents › Contents › Resources › <b>PodGo.sym</b>. It stays in this browser.</p>
+        <div class="row">
+          <button id="symBtn" class="ghost">Load all model names from POD Go Edit…</button>
+          <input type="file" id="symFile" accept=".sym" hidden>
+          <span class="status" id="symStat"></span>
+        </div>
+      </details>
     </div>
-    <div class="row conn-actions">
-      <button id="save" hidden>Save to the preset</button>
-      <button id="saveAsBtn" class="ghost" hidden>Save as…</button>
-      <button id="restore" class="ghost" hidden>Put the block back as it was</button>
-      <button id="refresh" class="ghost" hidden>Refresh blocks</button>
-    </div>
-    <p class="status" id="conn">Not connected: the pad runs as a simulation.</p>
-    <details class="more">
-      <summary>More…</summary>
-      <p class="status">Default tones are Line 6's Focus View presets for 514 POD Go models (ours for the EQs and two delays), and MORF-X recognises those blocks by itself. For cabs, loops and the rest, load the model list from POD Go Edit; on a Mac: Applications › Line6 › POD Go Edit › Show Package Contents › Contents › Resources › <b>PodGo.sym</b>. It stays in this browser.</p>
-      <div class="row">
-        <button id="symBtn" class="ghost">Load all model names from POD Go Edit…</button>
-        <input type="file" id="symFile" accept=".sym" hidden>
-        <span class="status" id="symStat"></span>
-      </div>
-    </details>
   </section>
 
   <div class="main">
@@ -286,7 +297,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
   </div>
 </aside>
 
-<script src="podgo-usb.js?v=2026-11-16g"></script>
+<script src="podgo-usb.js?v=2026-11-16h"></script>
 <script>
 'use strict';
 // ---- the five tones: keys as in the tone files, positions in pad space (x, y in [-1, 1], y up) ----
@@ -1017,6 +1028,7 @@ function afterDisconnect() {
   document.getElementById('saveAsBtn').hidden = true;
   document.getElementById('refresh').hidden = true;
   plField.hidden = true;
+  document.getElementById('unitPic').hidden = true;
   document.getElementById('restore').hidden = true; document.getElementById('grab').hidden = true;
   fillPicker(cur && cur.id);
 }
@@ -1033,6 +1045,12 @@ document.getElementById('connect').onclick = async () => {
     document.getElementById('save').hidden = noSave;
     document.getElementById('saveAsBtn').hidden = noSave;
     document.getElementById('refresh').hidden = false;
+    if (pg.device.image) {        // the owner's render of the connected unit
+      document.getElementById('unitImg').src = pg.device.image;
+      document.getElementById('unitImg').alt = pg.device.name;
+      document.getElementById('unitName').textContent = pg.device.name;
+      document.getElementById('unitPic').hidden = false;
+    }
     await scan();
     await plInit();
   } catch (e) {
