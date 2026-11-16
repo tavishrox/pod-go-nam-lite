@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>MORF-X for POD Go</title>
 <link rel="icon" href="morf-x-icon.svg" type="image/svg+xml">
-<meta name="description" content="MORF-X: your tone, in motion. An X-Y pad that blends a POD Go block between five tones: a centre and four corners.">
+<meta name="description" content="MORF-X: your tone, in motion. An X-Y pad that blends a block on your Line 6 device between five tones: a centre and four corners.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Michroma&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -104,16 +104,16 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
 <nav class="neon-nav" aria-label="Pages"><div class="in"><a class="neon-logo" href="index.html">ToneShift</a><div class="links"><a href="index.html">Setup</a><a href="converter.html">Converter</a><a href="how-to.html">Guide</a><a href="companion.html">Companion</a><a href="morph.html" aria-current="page">MORF-X</a><a href="https://github.com/tavishrox/pod-go-nam-lite">GitHub</a></div></div></nav>
 <div class="wrap">
   <header>
-    <div class="eyebrow">POD Go companion · experiment</div>
+    <div class="eyebrow">POD Go now · Helix, HX Stomp and HX Effects to come · experiment</div>
     <h1 class="morfx"><img src="morf-x-icon.svg" alt="" width="92" height="92"><span class="word" aria-label="MORF-X">MORF-<span class="x">X</span></span></h1>
     <p class="morfx-tag">Your tone. In motion.</p>
     <p class="lead">Drag the crosshair to blend a block between five tones: one in the centre, a different voicing in each corner. Every parameter of the model moves, knobs blend and switches change at the halfway point, and the block follows slowly, so a fast move becomes a smooth sweep.</p>
-    <p class="note"><b>Saved only when you say.</b> Connected, the pad moves the block's parameters live, the way POD Go Edit does. Nothing is saved until you press <b>Save to the preset</b>, which saves the preset that's loaded, in its own slot and name; until then, reloading it on the unit puts everything back. Quit POD Go Edit first; use Chrome or Edge on a computer.</p>
+    <p class="note"><b>Saved only when you say.</b> Connected, the pad moves the block's parameters live, the way the device's own editor does. Nothing is saved until you press <b>Save to the preset</b>, which saves the preset that's loaded, in its own slot and name; until then, reloading it on the unit puts everything back. Quit the editor app (POD Go Edit or HX Edit) first; use Chrome or Edge on a computer.</p>
   </header>
 
   <section class="panel">
     <div class="row">
-      <button id="connect">Connect to POD Go</button>
+      <button id="connect">Connect your device</button>
       <button id="disconnect" class="ghost" hidden>Disconnect</button>
       <label class="chk"><span id="pickLabel">Tones for</span> <select id="pick"></select></label>
       <button id="restore" class="ghost" hidden>Put the block back as it was</button>
@@ -860,7 +860,7 @@ document.getElementById('connect').onclick = async () => {
     if (pg) pg.close().catch(() => {});
     pg = null;
     connEl.innerHTML = e && e.name === 'NotFoundError'
-      ? '<b>No POD Go chosen.</b> Pick it in the list the browser shows (plugged in, switched on, POD Go Edit closed).'
+      ? '<b>No device chosen.</b> Pick it in the list the browser shows (plugged in, switched on, its editor app closed). For now that is the POD Go; Helix, HX Stomp and HX Effects are on the way.'
       : `<b>Couldn't connect:</b> ${escapeHtml(e.message || e)}`;
     afterDisconnect();
   }
@@ -925,7 +925,7 @@ document.getElementById('save').onclick = async () => {
   if (!pg) return;
   let c;
   try { c = await q(() => pg.current()); } catch (e) { lost(e); return; }
-  if (!confirm(`Save preset ${c.preset + 1} "${c.name}" on the POD Go as it sounds now?\n\nThis replaces the saved version of that preset.`)) return;
+  if (!confirm(`Save preset ${c.preset + 1} "${c.name}" on your device as it sounds now?\n\nThis replaces the saved version of that preset.`)) return;
   armed = false;
   await q(async () => {
     busy = true;
