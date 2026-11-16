@@ -494,7 +494,8 @@ function frac(n, v) {
 }
 
 // ---- output: send only changes, one message at a time, at most 30 batches a second ----
-const SEND_HZ = 30;
+const SEND_HZ = 30, MAX_BATCH = 6;
+let rtt = 0;                                   // average time the unit takes to answer one knob change (ms)
 let lastSent = {}, lastSendT = 0, sentWindow = [], lastMsg = '—';
 let pg = null, armed = false, busy = false, unitMsg = '';
 let chain = Promise.resolve();                 // every request to the unit, one at a time (they share one stream)
@@ -512,8 +513,18 @@ function send(vals, now) {
   if (busy || now - lastSendT < 1000 / SEND_HZ) return;
   const live = pg && cur.live;
   if (live && !armed) return;                  // connected: nothing changes on the unit until the pad is moved
-  const changes = cur.names.filter(n => vals[n] !== undefined && changed(n, vals[n])).map(n => [n, vals[n]]);
+  let changes = cur.names.filter(n => vals[n] !== undefined && changed(n, vals[n])).map(n => [n, vals[n]]);
   if (!changes.length) return;
+  // Each message waits for the unit's reply, so a big block (a Helix amp has 20 parameters) makes a slow step.
+  // Send the biggest changes first, a few per step; the rest follow on the next steps.
+  if (live && changes.length > MAX_BATCH) {
+    const score = ([n, v]) => {
+      const was = lastSent[n], k = cur.kinds[n];
+      if (was === undefined || k === 'bool' || k === 'int') return 2;
+      return Math.abs(v - was) / (k === 'unit' ? 1 : Math.max(1e-9, cur.ranges[n][1] - cur.ranges[n][0]));
+    };
+    changes = changes.sort((a, b) => score(b) - score(a)).slice(0, MAX_BATCH);
+  }
   lastSendT = now;
   if (!live) {
     changes.forEach(([n, v]) => { lastSent[n] = v; sentWindow.push(now); lastMsg = `${n} = ${fmt(n, v)}`; });
@@ -527,7 +538,9 @@ function send(vals, now) {
         if (cur !== target || !pg) break;      // block changed or disconnected meanwhile
         sentAt[n] = performance.now();
         const [dv, asInt] = toUnit(target.live, n, v);
+        const t0 = performance.now();
         await pg.setParam(target.live.pos, target.live.index[n], dv, asInt);
+        const dt = performance.now() - t0; rtt = rtt ? rtt * 0.9 + dt * 0.1 : dt;
         lastSent[n] = v; sentWindow.push(performance.now()); lastMsg = `${n} = ${fmt(n, v)}`;
       }
     } catch (e) { lost(e); }
@@ -567,7 +580,7 @@ function frame(now) {
     send(vals, now);
   }
   sentWindow = sentWindow.filter(t => now - t < 1000);
-  sendStat.innerHTML = `${pg && cur && cur.live ? (armed ? 'Sending' : 'Waiting for the pad') : 'Simulated'}: <b>${sentWindow.length}</b> msg/s · last: <b>${escapeHtml(lastMsg)}</b>` +
+  sendStat.innerHTML = `${pg && cur && cur.live ? (armed ? 'Sending' : 'Waiting for the pad') : 'Simulated'}: <b>${sentWindow.length}</b> msg/s${rtt ? ` · ${rtt.toFixed(0)} ms per message` : ''} · last: <b>${escapeHtml(lastMsg)}</b>` +
     (unitMsg ? ` · ${escapeHtml(unitMsg)}` : '');
   document.getElementById('posOut').textContent = `x ${pos.x.toFixed(2)} · y ${pos.y.toFixed(2)}`;
   document.getElementById('tgtOut').textContent = `target ${tgt.x.toFixed(2)}, ${tgt.y.toFixed(2)}`;
