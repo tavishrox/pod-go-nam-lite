@@ -111,7 +111,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
       <input type="file" id="symFile" accept=".sym" hidden>
       <span class="status" id="symStat"></span>
     </div>
-    <p class="status">Default tones are Line 6's own Focus View presets, five per model, for 460 of the POD Go's models, and the pad recognises those blocks by itself. For the other blocks, load the model list from your own copy of POD Go Edit (on a Mac: Applications › Line6 › POD Go Edit › Show Package Contents › Contents › Resources › <b>PodGo.sym</b>); it is read in this browser and kept there.</p>
+    <p class="status">Default tones are Line 6's own Focus View presets, five per model, plus our own gentle sets for the EQs and two delays that have none: 514 of the POD Go's models in all, every one that suits morphing, and the pad recognises those blocks by itself. For cabs, loops and the other blocks, load the model list from your own copy of POD Go Edit (on a Mac: Applications › Line6 › POD Go Edit › Show Package Contents › Contents › Resources › <b>PodGo.sym</b>); it is read in this browser and kept there.</p>
   </section>
 
   <div class="main">
@@ -167,7 +167,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
       <li>Each model has its own set of five tones: a centre and four corners, each with a name and a value for every parameter it sets. Tone files use one JSON shape: <code>{modelName, params: {Name: {behavior}}, regions: {origin, x_min_y_max, x_max_y_max, x_min_y_min, x_max_y_min}}</code>, top left, top right, bottom left, bottom right.</li>
       <li>The centre tone's share is <code>(1 − |x|)·(1 − |y|)</code>; the rest is split between the corners by bilinear weighting, so an edge blends only its two corners and each tone's own spot plays that tone exactly.</li>
       <li>Glide moves the real position towards the crosshair with a time constant. Only parameters that changed are sent, one message at a time, at most 30 batches a second.</li>
-      <li>Tones come from your own edits first, then tone files you imported, then the Focus View defaults. A model with none starts with all five set to the block as it is on the unit: edit them, or copy the block into a tone after dialling it in on the unit.</li>
+      <li>Tones come from your own edits first, then tone files you imported, then the defaults (Line 6's Focus View tones, or ours for the EQs and two delays). A model with none starts with all five set to the block as it is on the unit: edit them, or copy the block into a tone after dialling it in on the unit.</li>
     </ul>
   </section>
 </div>
@@ -233,7 +233,7 @@ let sel = 0;
 function prettySymbol(s) { return String(s || '').replace(/^HD2_/, '').replace(/([a-z])([A-Z0-9])/g, '$1 $2'); }
 function setFor(id) { return mine[id] || (imported[id] && imported[id].set) || (defaults[id] && defaults[id].set) || (id === GENERIC_ID ? GENERIC : null); }
 function sourceOf(id) {
-  return mine[id] ? 'your edits' : imported[id] ? 'imported tone file' : defaults[id] ? "Line 6's Focus View defaults" : id === GENERIC_ID ? 'starter tones' : 'new';
+  return mine[id] ? 'your edits' : imported[id] ? 'imported tone file' : defaults[id] ? (defaults[id].ours ? 'our starter tones' : "Line 6's Focus View defaults") : id === GENERIC_ID ? 'starter tones' : 'new';
 }
 function categoryOf(id) { return imported[id] ? imported[id].category : defaults[id] ? defaults[id].category : 'yours'; }
 function labelOf(id) {
@@ -249,7 +249,7 @@ async function loadDefaults() {
       const set = normalise({ modelName: e.modelName, regions: e.regions,
         params: Object.fromEntries(Object.entries(e.params).map(([n, b]) => [n, { behavior: b }])) });
       if (!set) return;
-      defaults[sym] = { set, category: e.category };
+      defaults[sym] = { set, category: e.category, ours: e.source === 'toneshift' };
       if (Number.isInteger(e.model) && Array.isArray(e.order)) byModel[e.model] = { symbol: sym, params: e.order };
     });
   } catch (e) { /* no defaults file: imported tones and the starter set still work */ }

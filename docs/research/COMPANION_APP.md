@@ -171,3 +171,14 @@ x_max_y_max}}`, each region a `name` plus a value for every parameter. What it t
   by its behaviour: blend (`interpolate`), pick the tone with the most weight (`quantize`), or leave (`exclude`).
   A model with no set starts with all five tones as the block is; a block's model is named from the user's own
   `PodGo.sym`. Imported files, edits and the model list are kept in the browser's IndexedDB; nothing is shipped.
+
+### Every morphable model has a set (2026-11-16)
+
+- The first build looked for each Focus file as `HD2_<name>` only, so 31 models with Focus files under other names
+  were missed: the `VIC_`/`Victoria_`/`L6SPB_` models, the unprefixed synths and FX (SynthLead, TapeEater, KillerZ…),
+  and two with only a V2 file (Vintage Digital, Line 6 2204 Mod). `podgo/focus_extras.py` adds them, mapped by name.
+- The EQs (Simple, 10 Band, Cali Q, Low/High Shelf, Tilt, Low and High Cut, Parametric; mono, stereo and the fixed
+  slot) and two Victoria delays (Euclidean, Glitch/Shuffling) have no Focus file. They get our own gentle sets,
+  marked `source: "toneshift"`: gains within about ±3 dB, all inside POD Go Edit's ranges (`eq.models`, `delay.models`).
+- Now 514 of the 627 models have a set. The 113 without are cabs, FX loops, sends, returns, loopers, IRs and I/O.
+- NAM A2 Lite gets no set by design: it plays captures, so the pad only starts from the block as it is.
