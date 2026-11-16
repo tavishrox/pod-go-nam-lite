@@ -18,6 +18,9 @@ module.exports = win => {
         blocks: [...document.getElementById('pick').options].map(o => o.textContent),
         tones: cur ? KEYS.map(k => cur.set.regions[k].name) : [],
         saveShown: !document.getElementById('save').hidden })`);
+      out.presets = await js(`(async () => { const c = await pg.current();
+        const l = await q(() => pg.presetList(c.setlist)); return { setlist: c.setlist, count: l.length,
+        first: l.slice(0, 6).map(p => slotName(p.index) + ' ' + p.name) }; })()`);
       console.log('SELFTEST', JSON.stringify(out, null, 2));
       await js("document.getElementById('disconnect').click()");
       await new Promise(r => setTimeout(r, 800));

@@ -270,7 +270,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
   </div>
 </aside>
 
-<script src="podgo-usb.js?v=2026-11-16c"></script>
+<script src="podgo-usb.js?v=2026-11-16d"></script>
 <script>
 'use strict';
 // ---- the five tones: keys as in the tone files, positions in pad space (x, y in [-1, 1], y up) ----
@@ -1142,11 +1142,13 @@ saDlg.addEventListener('close', () => {
   q(async () => {
     busy = true;
     try {
+      const moved = pg.event ? pg.event(4, 1500) : null;   // the Helix loads the new preset (event 4)
       await pg.saveAs(slot, name, setlist);
+      if (moved) await moved;
       const c = await pg.current();
       connEl.innerHTML = connEl.innerHTML.replace(/ · (move the pad|put back|saved).*$/, '') +
         ` · saved as "${escapeHtml(name)}" in ${isHelix() ? `setlist ${setlist + 1}, ` : ''}slot ${slotName(slot)}` +
-        (c.setlist === setlist && c.preset === slot ? '' : ` (the unit is still on ${slotName(c.preset)} "${escapeHtml(c.name)}")`) + '.';
+        (c.setlist === setlist && c.preset === slot ? ', now loaded' : ` (the unit is still on ${slotName(c.preset)} "${escapeHtml(c.name)}")`) + '.';
       if (cur && cur.live) {
         const info = await pg.slotInfo(cur.live.pos);
         if (info) { cur.live.values = info.values.slice(); cur.live.original = info.values.slice(); }

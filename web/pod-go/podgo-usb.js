@@ -373,9 +373,14 @@
   };
   PodGo.prototype.presetList = async function (setlist) {
     var r = await this.lib.request(CMD.LIB_LIST, new Map([[K.SETLIST, setlist]]), 8000);
+    // POD Go: [{slot: {0x6d: name}}]. Helix family: [{number: name}], the number counted across all setlists
+    // (setlist 5 starts at 640), so the slot is the number less the list's first one (2026-11-16, Helix Floor).
+    var base = null;
     return r.map(function (m) {
       var idx = m.keys().next().value, info = m.get(idx);
-      return { index: idx, name: text(info.get(K.NAME) || new Uint8Array(0)) };
+      if (info instanceof Map) return { index: idx, name: text(info.get(K.NAME) || new Uint8Array(0)) };
+      if (base === null) base = idx;
+      return { index: idx - base, name: info instanceof Uint8Array ? text(info) : String(info == null ? "" : info) };
     });
   };
   PodGo.prototype.select = async function (preset, setlist) {
