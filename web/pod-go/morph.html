@@ -105,6 +105,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
       <label class="chk"><span id="pickLabel">Tones for</span> <select id="pick"></select></label>
       <button id="restore" class="ghost" hidden>Put the block back as it was</button>
       <button id="save" hidden>Save to the preset</button>
+      <button id="refresh" class="ghost" hidden>Refresh blocks</button>
     </div>
     <p class="status" id="conn">Not connected: the pad runs as a simulation.</p>
     <div class="row">
@@ -694,7 +695,7 @@ async function scanNow(keepPos) {
 function chooseBlock(b) {
   const index = {};
   b.names.forEach((n, k) => index[n] = k);
-  const live = { pos: b.pos, index, names: b.names, types: b.types, values: b.values.slice(), original: b.values.slice(), label: b.label };
+  const live = { pos: b.pos, model: b.model, index, names: b.names, types: b.types, values: b.values.slice(), original: b.values.slice(), label: b.label };
   let id = b.symbol, label = b.label;
   if (b.model === NAM_MODEL) {                 // on the NAM firmware this slot is NAM A2 Lite, not Elektrik
     id = NAM_ID; label = 'NAM A2 Lite (or Elektrik)'; live.nam = true;
@@ -718,6 +719,7 @@ function afterDisconnect() {
   document.getElementById('connect').hidden = false;
   document.getElementById('disconnect').hidden = true;
   document.getElementById('save').hidden = true;
+  document.getElementById('refresh').hidden = true;
   document.getElementById('restore').hidden = true; document.getElementById('grab').hidden = true;
   fillPicker(cur && cur.id);
 }
@@ -731,6 +733,7 @@ document.getElementById('connect').onclick = async () => {
     document.getElementById('connect').hidden = true;
     document.getElementById('disconnect').hidden = false;
     document.getElementById('save').hidden = false;
+    document.getElementById('refresh').hidden = false;
     await scan();
   } catch (e) {
     if (pg) pg.close().catch(() => {});
@@ -773,6 +776,28 @@ document.getElementById('restore').onclick = () => { armed = false; q(async () =
   busy = false;
 }); };
 
+// ---- keep up with the unit ----
+// A preset load says so (event 4), and a knob turned on the unit echoes as 0x1e. A different model, or a block
+// moved or removed, is checked by asking: the pad's block is read once a second (and soon after any other notify
+// event); if it is no longer the same model in the same place, the blocks are read again.
+const CHECK_MS = 1000;
+let checking = false, noteTimer = 0;
+async function checkBlock() {
+  if (!pg || !cur || !cur.live || busy || checking) return;
+  checking = true;
+  try {
+    const L = cur.live;
+    const info = await q(() => pg ? pg.slotInfo(L.pos) : null);
+    if (pg && cur && cur.live === L && (!info || info.kind !== 6 || info.model !== L.model)) {
+      await scan(L.pos);
+      if (cur && cur.live) connEl.innerHTML += ' · <b>picked up a change on the unit</b>';
+    }
+  } catch (e) { lost(e); }
+  checking = false;
+}
+setInterval(checkBlock, CHECK_MS);
+document.getElementById('refresh').onclick = () => { if (pg) scan(cur && cur.live && cur.live.pos).catch(lost); };
+
 // Save: the unit's own save (0x46) of the edit buffer into the preset that's loaded, same slot, same name.
 // It saves what is on the unit now, so the pad stops first; "put back" then returns to the saved version.
 document.getElementById('save').onclick = async () => {
@@ -802,6 +827,11 @@ function onNote(m) {
   if (ev === 4 && pg) {                         // another preset loaded on the unit
     const keep = cur && cur.live && cur.live.pos;
     setTimeout(() => { if (pg) scan(keep).catch(lost); }, 300);
+    return;
+  }
+  if (ev !== 0x1e && ev !== 20 && pg) {         // something else changed on the unit (a block, a model…): look
+    console.debug('POD Go notify', ev);
+    clearTimeout(noteTimer); noteTimer = setTimeout(checkBlock, 200);
     return;
   }
   if (ev !== 0x1e || !(body instanceof Map) || !(body.get(0x6a) instanceof Map) || !cur || !cur.live) return;
