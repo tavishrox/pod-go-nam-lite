@@ -248,6 +248,7 @@ let models = null;          // [{ symbol, params: [names] }] by the unit's model
 let imported = {};          // symbol -> { set, category } from tone files the user imported
 let defaults = {};          // symbol -> { set, category } from focus-defaults.json (Line 6's Focus View tones)
 let byModel = [];           // the unit's model number -> { symbol, params } for the models in focus-defaults.json
+let helixByModel = [];      // the same for the Helix family, every model, from focus-helix.json
 let mine = {};              // symbol -> set, the user's own edits
 const saveMine = () => { mineDirty = true; showMine(); return store.set('mine', mine); };
 let mineDirty = false, mineFile = null, mineFileName = '', mineSavedAt = '';
@@ -279,6 +280,16 @@ async function loadDefaults() {
       if (Number.isInteger(e.model) && Array.isArray(e.order)) byModel[e.model] = { symbol: sym, params: e.order };
     });
   } catch (e) { /* no defaults file: imported tones and the starter set still work */ }
+  try {                         // the Helix family: model numbers, parameter order, and tones the POD Go file lacks
+    const h = await (await fetch('focus-helix.json')).json();
+    Object.entries(h.models || {}).forEach(([n, [symbol, params]]) => helixByModel[+n] = { symbol, params });
+    Object.entries(h.sets || {}).forEach(([sym, e]) => {
+      if (defaults[sym]) return;
+      const set = normalise({ modelName: e.modelName, regions: e.regions,
+        params: Object.fromEntries(Object.entries(e.params).map(([n, b]) => [n, { behavior: b }])) });
+      if (set) defaults[sym] = { set, category: e.category, ours: e.source === 'toneshift' };
+    });
+  } catch (e) { /* no Helix file: the POD Go still works */ }
 }
 function behaviour(set, n) { const b = set.params[n] && set.params[n].behavior; return b === 'quantize' || b === 'exclude' ? b : 'interpolate'; }
 function regionValue(set, k, n) { const r = set.regions[k] || {}; return n in r ? r[n] : (set.regions.origin || {})[n]; }
@@ -788,8 +799,14 @@ const STD_NAMES = ['Drive', 'Bass', 'Mid', 'Treble', 'Presence', 'ChVol', 'Maste
 // The NAM firmware puts NAM A2 Lite in Elektrik's place (model 27): same knob slots, other meanings, and Master
 // picks the capture. So that block never gets Elektrik's tones: its own set starts from the block, Master fixed.
 const NAM_MODEL = 27, NAM_ID = '*nam-a2-lite';
+const isHelix = () => !!(pg && pg.device && pg.device.family === 'helix');
+function posLabel(p) {         // POD Go: the slot number; Helix family: DSP, path and slot, e.g. 1A4
+  if (!isHelix()) return String(p);
+  const d = Math.floor(p / 20) + 1, r = p % 20;
+  return r > 10 ? `${d}B${r - 10}` : `${d}A${r}`;
+}
 function describe(info) {
-  const m = (models && models[info.model]) || byModel[info.model];
+  const m = isHelix() ? helixByModel[info.model] : (models && models[info.model]) || byModel[info.model];
   if (m) return { symbol: m.symbol, names: m.params };
   if (info.category === 17) return { symbol: null, names: STD_NAMES };   // an amp, knob order assumed
   return { symbol: null, names: null };
@@ -798,7 +815,7 @@ function scan(keepPos) { return q(() => scanNow(keepPos)); }
 async function scanNow(keepPos) {
   if (!pg) return;
   blocks = [];
-  for (let p = 1; p <= 10; p++) {
+  for (const p of pg.device && pg.device.slots || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
     const info = await pg.slotInfo(p);
     if (!info || info.kind !== 6) continue;
     const d = describe(info);
@@ -809,11 +826,11 @@ async function scanNow(keepPos) {
     blocks.push(info);
   }
   document.getElementById('pickLabel').textContent = 'Block';
-  pickSel.innerHTML = blocks.map(b => `<option value="${b.pos}"${b.names ? '' : ' disabled'}>${b.pos} · ${escapeHtml(b.label)}${b.on ? '' : ' (off)'}` +
+  pickSel.innerHTML = blocks.map(b => `<option value="${b.pos}"${b.names ? '' : ' disabled'}>${posLabel(b.pos)} · ${escapeHtml(b.label)}${b.on ? '' : ' (off)'}` +
     (b.symbol && !setFor(b.symbol) ? ' · no tones yet' : '') + '</option>').join('');
   const pick = blocks.find(b => b.pos === keepPos && b.names) || blocks.find(b => b.amp && b.names) || blocks.find(b => b.names);
   if (!pick) {
-    connEl.innerHTML = `<b>Connected</b>, but no block the pad can use${models ? '' : ' (load the model names from POD Go Edit to use the others)'}.`;
+    connEl.innerHTML = `<b>Connected</b>, but no block the pad can use${models || isHelix() ? '' : ' (load the model names from POD Go Edit to use the others)'}.`;
     if (cur) cur.live = null;
     document.getElementById('restore').hidden = true; document.getElementById('grab').hidden = true;
     return;
@@ -826,13 +843,13 @@ function chooseBlock(b) {
   b.names.forEach((n, k) => index[n] = k);
   const live = { pos: b.pos, model: b.model, index, names: b.names, types: b.types, values: b.values.slice(), original: b.values.slice(), label: b.label };
   let id = b.symbol, label = b.label;
-  if (b.model === NAM_MODEL) {                 // on the NAM firmware this slot is NAM A2 Lite, not Elektrik
+  if (b.model === NAM_MODEL && !isHelix()) {                 // on the NAM firmware this slot is NAM A2 Lite, not Elektrik
     id = NAM_ID; label = 'NAM A2 Lite (or Elektrik)'; live.nam = true;
   }
   else if (!id) { id = GENERIC_ID; label = 'Default tones'; }            // no model list: an amp, the usual knobs
 
   useSet(id, label, live);
-  connEl.innerHTML = `<b>Connected</b> · ${escapeHtml(label)} in slot ${b.pos}` +
+  connEl.innerHTML = `<b>Connected</b> · ${escapeHtml(pg.device ? pg.device.name : 'POD Go')} · ${escapeHtml(label)} in slot ${posLabel(b.pos)}` +
     (live.nam ? " · with NAM firmware the knobs are NAM's (Master is the capture and stays put)" : '') +
     (b.symbol ? '' : ' · <b>knob order assumed</b> (load the model names)') + ' · move the pad to take over the block.';
   document.getElementById('restore').hidden = false; document.getElementById('grab').hidden = false;
@@ -855,13 +872,13 @@ function afterDisconnect() {
 document.getElementById('connect').onclick = async () => {
   connEl.textContent = 'Connecting…';
   try {
-    pg = await PODGOUSB.connect(navigator.usb);
+    pg = await PODGOUSB.connect(navigator.usb, { devices: PODGOUSB.DEVICES });
     pg.onNotify(onNote);
     const c = await pg.current();
-    connEl.textContent = `Connected to preset ${c.preset + 1} "${c.name}" · reading the blocks…`;
+    connEl.textContent = `Connected to the ${pg.device.name}${pg.device.untested ? ' (not tried with MORF-X yet)' : ''}, preset ${c.preset + 1} "${c.name}" · reading the blocks…`;
     document.getElementById('connect').hidden = true;
     document.getElementById('disconnect').hidden = false;
-    document.getElementById('save').hidden = false;
+    document.getElementById('save').hidden = pg.device.family !== 'podgo';   // saving not yet tried on the Helix family
     document.getElementById('refresh').hidden = false;
     await scan();
   } catch (e) {

@@ -23,6 +23,18 @@
   "use strict";
 
   var DEVICE = { vendorId: 0x0E41, productId: 0x424B };
+  // Units that speak the same editor protocol (MORF-X passes these; the companion stays POD Go only).
+  // slots: grid positions that hold blocks. Helix: 20 per DSP (1..8 path A, 11..18 path B), checked on a
+  // Helix Floor 2026-11-16. HX Stomp: one DSP laid out the same way (not yet tried from the browser).
+  var DEVICES = [
+    { vendorId: 0x0E41, productId: 0x424B, name: "POD Go", family: "podgo", slots: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] },
+    { vendorId: 0x0E41, productId: 0x4248, name: "Helix", family: "helix",
+      slots: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 26, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38] },
+    { vendorId: 0x0E41, productId: 0x4246, name: "HX Stomp", family: "helix", untested: true,
+      slots: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18] },
+    { vendorId: 0x0E41, productId: 0x4253, name: "HX Stomp XL", family: "helix", untested: true,
+      slots: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18] }
+  ];
   var RX_BUF = 0x1000, HB_MS = 1000;
   var F_SYN = 0x01, F_FIN = 0x02, F_DATA = 0x04, F_WIN = 0x08, F_HB = 0x10, F_HBREQ = 0x20;
   var EDITOR = { local: 0x1000, remote: 0x03ED, svc: 6 },
@@ -526,12 +538,15 @@
   async function connect(usb, opts) {
     opts = opts || {};
     if (!usb) throw fail("This browser has no WebUSB: use Chrome or Edge on a computer.", "nousb");
-    var dev = (await usb.getDevices()).find(function (d) { return d.vendorId === DEVICE.vendorId && d.productId === DEVICE.productId; });
-    if (!dev) dev = await usb.requestDevice({ filters: [DEVICE] });
+    var kinds = opts.devices || [DEVICES[0]];
+    var match = function (d) { return kinds.find(function (k) { return d.vendorId === k.vendorId && d.productId === k.productId; }); };
+    var dev = (await usb.getDevices()).find(match);
+    if (!dev) dev = await usb.requestDevice({ filters: kinds.map(function (k) { return { vendorId: k.vendorId, productId: k.productId }; }) });
+    var kind = match(dev) || DEVICES[0];
     await dev.open();
     if (dev.configuration === null) await dev.selectConfiguration(1);
     try { await dev.claimInterface(0); }
-    catch (e) { try { await dev.close(); } catch (x) { /* */ } throw fail("Another program has the POD Go: quit POD Go Edit and Line 6 Updater, then try again.", "busy"); }
+    catch (e) { try { await dev.close(); } catch (x) { /* */ } throw fail("Another program has the " + kind.name + ": quit POD Go Edit, HX Edit and Line 6 Updater, then try again.", "busy"); }
     var alt = dev.configuration.interfaces[0].alternate, epIn = null, epOut = null, mtu = 512;
     alt.endpoints.forEach(function (e) {
       if (e.type !== "bulk") return;
@@ -542,10 +557,11 @@
     link.start();
     await sleep(500);                                   // stale inbound data goes to no stream
     var pg = new PodGo(link);
+    pg.device = kind;
     try { await pg.open(); } catch (e) { await link.close(); throw e; }
     return pg;
   }
 
-  root.PODGOUSB = { connect: connect, MP: MP, snapshots56: snapshots56, snapshotList: snapshotList, setSnapshot: setSnapshot,
+  root.PODGOUSB = { connect: connect, DEVICES: DEVICES, MP: MP, snapshots56: snapshots56, snapshotList: snapshotList, setSnapshot: setSnapshot,
                     COLOURS: COLOURS, NAME_MAX: NAME_MAX, text: text, CMD: CMD, K: K, APP: APP };
 })(typeof self !== "undefined" ? self : this);
