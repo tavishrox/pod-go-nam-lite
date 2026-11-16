@@ -82,3 +82,92 @@ Chrome: a preset restored from the backup file, 5 and 6 on the unit.
 
 Backup files are MessagePack with string keys; the page's decoder returns string keys as strings (the first
 try rejected every file).
+
+## Set one parameter (2026-11-15, from POD Go Edit; confirmed on the unit)
+
+For the Morph Pad (`web/pod-go/morph.html`), which needs to turn a knob live. POD Go Edit's Mac binary keeps
+its symbols, so the path is readable: `PodGoEditBufferContext::setParam` -> `PodGoEditorService::setObjectParam
+(objectId, dsp, index, value)` -> `PodGoCmdDispatcher::DispatchCommand(6, 0x1e, params)`.
+
+- **Editor command 0x1e** (firmware: decoder 0x28c879e5, handler 0x28c8c27d), params
+  `{0x62: grid position, 0x1d: dsp, 0x1a: 0, 0x1c: parameter index, 0x77: value}`.
+  POD Go Edit's dictionary keys carry an ordering tag in the high 16 bits (0x1001d, 0x2001a, ...); only the low
+  byte goes on the wire (load preset is built the same way as 0x6b, 0x1006c and is sent as {0x6b, 0x6c}).
+- `0x1d` true = a model ("DSP") parameter, its index from `HelixSymbolTable::lookupParam(model, name)`, i.e.
+  the place in the model's parameter list (amps: Drive 0, Bass 1, Mid 2, Treble 3, Presence 4, ChVol 5,
+  Master 6, ...). False = the editor's "V params" (`LookupVParamIndex`).
+- Value: the L6Variant from the model definition; knobs are 0..1 floats (Drive 0.5 shows 5.0). The probe sends
+  float32.
+- Grid position: object ids by grid position come from the unit (`ObjectInfo` +0x6c); in setObjectParam
+  object 0xff -> 0 (input), 0xfd -> 11 (output), the blocks in between. **Command 0x2d `{0x62: pos}`**
+  (`getObjectInfo`) reads what is at a position without changing anything.
+- After a set, POD Go Edit ignores notifications 0x3e9 and 0x1e for 1 s: the unit reports the change back.
+- Also seen: recall snapshot = 0x58 `{0x5c: n}`.
+
+Test (`podgo/param_probe.py`, edit buffer only, nothing saved): `info` to find the amp's grid position,
+`listen` while turning Drive on the unit, `set POS 0 0.5`, then `sweep POS 0 0.2 0.8 3` for smoothness at
+30 messages a second.
+
+Parameter names per model: POD Go Edit's `Resources/PodGo.sym` (JSON, 627 models). It is Line 6's file: read
+it from the user's own install or get the order from the unit; never commit or publish it.
+
+### On the unit (2026-11-15, preset 45 "NAM Essentials", POD Go Edit closed)
+
+- `info` (0x2d) works for positions 0..11. The reply is `{13: pos, 24: {19: type, 20: {...}}}`. Blocks have type 6:
+  `20.25` is the model number, `20.10` is on/off, and `20.11.4` is the list of current parameter values in index
+  order. Empty slots return None, 0 is the input and 11 the output. The amp (model 27) was at grid position 5;
+  its `.pgp` `@position` is 3, so ask the unit rather than work it out from the file.
+- `set 5 0 0.65` (Drive): reply `{102: seq, 103: 0, 104: <the params echoed>}`. A float32 value is accepted. The
+  notify channel then sends `{105: 30, 106: {..., 106: <same params>}}` (notification 0x1e), and `info` reads
+  Drive back as 0.65.
+- `sweep 5 0 0.2 0.8 3`: 91 messages in 3.03 s, every one status 0, with one echo per message. Drive was put back
+  to 0.5 afterwards. Whether the glide sounds smooth (no zipper noise) still needs a listen.
+- For the Morph Pad: read the slot list with 0x2d, send 0x1e per changed knob at up to 30 Hz, and update the
+  display from the 0x1e notifications so knob turns on the unit show up too.
+
+### Morph Pad on the unit (web/pod-go/morph.html, local only)
+
+`podgo-usb.js` gained `slotInfo(pos)`, `setParam(pos, index, value)` (value always sent as float32, so 0 and 1
+go out as floats; bytes checked against param_probe.py) and `onNotify(fn)`. The pad finds the amp with 0x2d,
+sends nothing until the pad is moved, queues every request one at a time (they share the editor stream), keeps
+the values read at connect for "Put the amp back", rescans when a preset loads (event 4), and treats a 0x1e echo
+more than 1 s after its own send as a knob turned on the unit.
+
+Knob order differs between amps: of 214 amp and preamp models in POD Go Edit's list, 58 use Drive, Bass, Mid,
+Treble, Presence, ChVol, Master as indices 0-6; 44 have no Presence and put Master at 4, and the rest vary.
+The unit's model number is the model's place in `PodGo.sym` (checked on all seven blocks of preset 45). The page
+lets the user load their own `PodGo.sym` and keeps only the amp knob-name lists in that browser; without it, it
+assumes the common order and says so. Nothing from the file ships with the page.
+
+### Line 6's Focus View data, as a guide (2026-11-15; the files stay outside the repo)
+
+The user keeps Line 6 Stadium's Focus View defaults outside the repo (`../../Res/focus-view-xy-defaults/<category>/<Model>.json`,
+674 models). Update, same day: the owner decided these defaults may ship (public, built-in preset data, not sold);
+the 460 POD Go models' sets are in `web/pod-go/focus-defaults.json` with each model's POD Go number and parameter
+order. The NAM firmware's model 27 (NAM A2 Lite in Elektrik's place) never gets Elektrik's tones, and its Master
+(the capture) is fixed.
+Shape: `{modelName, params: {Name: {id, behavior}}, regions: {origin, x_min_y_min, x_min_y_max, x_max_y_min,
+x_max_y_max}}`, each region a `name` plus a value for every parameter. What it teaches:
+
+- Five tones per model, centre plus four corners, as the Morph Pad already does; each tone has its own name.
+- Every parameter of the model is set, not just the seven main knobs (Sag, Ripple, Bias, BiasX, Hum, switches).
+- Three behaviours: `interpolate` (blend; float), `quantize` (switches and selectors; bool or int, so pick, don't
+  blend) and `exclude` (leave alone: Stadium's cab EQ internals).
+- Values are the device's own units: 0..1 for knobs, dB and Hz for EQ bands and thresholds, bool and int for switches.
+- Model names are the POD Go's symbols without `HD2_`; 213 of the POD Go's 214 amp and preamp models have a set,
+  and 460 of its 627 models in all. Parameter names match `PodGo.sym` exactly, but Stadium's `id`s do not always
+  match the POD Go's order (79 models have extra Stadium parameters), so map by name, never by id.
+
+### Morph Pad rebuilt around tone sets per model (2026-11-15)
+
+- On the unit, 0x1e also takes an integer (a selector: the Simple Delay's SyncSelect1, 6 -> 8) and a boolean (a
+  switch: TempoSync1, True -> False). Each reads back with 0x2d and was restored. So every parameter type can be
+  set live; send each in the type the unit holds it in (0x2d's values carry it: float32, int, bool).
+- `podgo-usb.js`: `MP.decode(body, typed)` returns floats as F32 objects (a float 0.0 stays distinct from an int
+  0), and `slotInfo` uses it to return `types` beside `values`. `setParam(pos, index, value, asInt)` sends a boolean
+  as a boolean, an integer when asked, and any other number as float32.
+- `morph.html`: a tone set per model, in the tone-file shape described above. The page lists every block on the unit, picks the
+  model's set (the user's own edits, else imported files, else our starter amp tones), and blends each parameter
+  by its behaviour: blend (`interpolate`), pick the tone with the most weight (`quantize`), or leave (`exclude`).
+  A model with no set starts with all five tones as the block is; a block's model is named from the user's own
+  `PodGo.sym`. Imported files, edits and the model list are kept in the browser's IndexedDB; nothing is shipped.

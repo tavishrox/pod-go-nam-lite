@@ -8,6 +8,9 @@
 //   await pg.readPreset(true)   -> Uint8Array l6-helix blob; true asks for snapshots 5 and 6 (key 14) too
 //   await pg.writeEditBuffer(blob)   (the unit's edit buffer only: nothing saved)
 //   await pg.restore(slot, blob, name, setlist)   writes blob into that slot and saves it (overwrites the slot)
+//   await pg.slotInfo(pos)      -> null or { pos, model, on, values, types } for grid position 0..11 (read only, 0x2d)
+//   await pg.setParam(pos, index, value, asInt)   one parameter of the edit buffer (0x1e; nothing saved)
+//   pg.onNotify(fn)             every notify message (a Map); a knob change, the pad's or the unit's, is 0x1e
 //   await pg.close()
 //
 // Wire format (hx_dfu_reboot.py's notes): one message per OUT transfer, padded to 4 bytes; transport header
@@ -29,9 +32,15 @@
             SETLIST: 0x6B, PRESET: 0x6C, NAME: 0x6D, PBLOB: 0x6E };
   // SAVE_AS 0x46: save the edit buffer to {0x6b setlist, 0x6c slot, 0x6d name} (0x45 keeps the slot's name);
   // the unit's own save path, so snapshots 5 and 6 in the buffer are written too (docs/research/COMPANION_APP.md).
-  var CMD = { LOAD: 0x14, SET_EDITBUF: 0x15, GET_EDITBUF: 0x16, CURRENT: 0x17, SAVE_AS: 0x46, LIB_LIST: 0x01 };
+  var CMD = { LOAD: 0x14, SET_EDITBUF: 0x15, GET_EDITBUF: 0x16, CURRENT: 0x17, SAVE_AS: 0x46, LIB_LIST: 0x01,
+              SET_PARAM: 0x1e, OBJECT_INFO: 0x2d };
+  // SET_PARAM {0x62 grid position, 0x1d true (a model parameter), 0x1a 0, 0x1c parameter index, 0x77 float32}:
+  // POD Go Edit's setObjectParam; the unit echoes each change on the notify stream as {0x69: 0x1e, 0x6a: {...,
+  // 0x6a: the same params}}. OBJECT_INFO {0x62 pos} -> {13 pos, 24 {19 kind (6 = a block), 20 {9 category,
+  // 10 on, 25 model (the place in POD Go Edit's model list), 11 {4 values in index order}}}} (2026-11-15).
   var APP = { 0x7a: 1 };   // the six-snapshot firmware's marker: the read carries key 14 (snapshots 5 and 6)
 
+  function F32(v) { this.v = v; }    // a number sent as float32 even when whole (0 and 1 knob values)
   var PENDING = { pending: true };   // a request the unit accepted and completes later (status 1)
   function fail(text, code) { var e = new Error(text); e.code = code || "usb"; return e; }
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -52,12 +61,14 @@
   // ---- MessagePack (what the unit sends and accepts; strings and buffers decode as Uint8Array)
   var MP = {
     encode: function (v) { var out = []; enc(v, out); return concat(out); },
-    decode: function (b) { var r = dec(b, 0); return r[0]; },
+    // typed: floats come back as F32 objects, so a float 0.0 stays distinguishable from an integer 0
+    decode: function (b, typed) { typedFloats = !!typed; try { return dec(b, 0)[0]; } finally { typedFloats = false; } },
     decodeAt: dec
   };
   function enc(v, out) {
     if (v === null || v === undefined) { out.push(Uint8Array.of(0xc0)); return; }
     if (v === true || v === false) { out.push(Uint8Array.of(v ? 0xc3 : 0xc2)); return; }
+    if (v instanceof F32) { var g = new Uint8Array(5); g[0] = 0xca; new DataView(g.buffer).setFloat32(1, v.v); out.push(g); return; }
     if (typeof v === "number") {
       if (Number.isInteger(v)) {
         if (v >= 0 && v < 128) out.push(Uint8Array.of(v));
@@ -93,6 +104,7 @@
     out.push(keys.length < 16 ? Uint8Array.of(0x80 | keys.length) : Uint8Array.of(0xde, keys.length >> 8, keys.length & 0xff));
     keys.forEach(function (k) { enc(/^-?\d+$/.test(k) ? Number(k) : k, out); enc(v[k], out); });
   }
+  var typedFloats = false;            // only ever set for the length of one synchronous decode
   function dec(b, p) {
     var t = b[p], dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
     if (t === undefined) throw fail("MessagePack: truncated");
@@ -108,8 +120,8 @@
       case 0xc4: case 0xd9: return raw(b[p + 1], p + 2);
       case 0xc5: case 0xda: return raw(dv.getUint16(p + 1), p + 3);
       case 0xc6: case 0xdb: return raw(dv.getUint32(p + 1), p + 5);
-      case 0xca: return [dv.getFloat32(p + 1), p + 5];
-      case 0xcb: return [dv.getFloat64(p + 1), p + 9];
+      case 0xca: var f4 = dv.getFloat32(p + 1); return [typedFloats ? new F32(f4) : f4, p + 5];
+      case 0xcb: var f8 = dv.getFloat64(p + 1); return [typedFloats ? new F32(f8) : f8, p + 9];
       case 0xcc: return [b[p + 1], p + 2];
       case 0xcd: return [dv.getUint16(p + 1), p + 3];
       case 0xce: return [dv.getUint32(p + 1), p + 5];
@@ -286,14 +298,14 @@
     if (!len) await this.st.windowUpdate();
     return { a: v.getUint16(0, true), svc: v.getUint16(2, true), body: body };
   };
-  Channel.prototype.request = async function (cmd, params, ms) {
+  Channel.prototype.request = async function (cmd, params, ms, typed) {
     ms = ms || 5000;
     this.seq = (this.seq + 1) & 0xFFFF;
     var req = new Map([[K.SEQ, this.seq], [K.CMD, cmd], [K.PARAMS, params === undefined ? null : params]]);
     var body = MP.encode(req), hdr = new Uint8Array(8), v = new DataView(hdr.buffer);
     v.setUint16(0, 1, true); v.setUint16(2, this.svc, true); v.setUint32(4, body.length, true);
     await this.writeMsg(concat([hdr, body]), ms);
-    var rep = MP.decode((await this.readMsg(ms)).body);
+    var rep = MP.decode((await this.readMsg(ms)).body, typed);
     if (rep.get(K.STATUS) === 1) return PENDING;   // accepted, completes later (announced on the notify stream)
     if (rep.get(K.STATUS) !== 0) {
       var res = rep.get(K.RESULT), err = res instanceof Map ? res.get(K.ERR) : null;
@@ -325,9 +337,10 @@
     // after some 30 preset loads (hx_ctl.py, 2026-11-01).
     this.nf = new Channel(this.link, NOTIFY); await this.nf.open(4000);
     var self = this;
-    this.waiters = [];
+    this.waiters = []; this.listeners = [];
     this.nf.pump(function (m) {
       var ev = m instanceof Map ? m.get(0x69) : null;
+      self.listeners.forEach(function (fn) { try { fn(m); } catch (e) { /* a listener's own problem */ } });
       self.waiters = self.waiters.filter(function (w) { if (w.ev === ev) { w.done(); return false; } return true; });
     });
     this.lib = new Channel(this.link, LIBRARIAN); await this.lib.open(4000);
@@ -382,6 +395,23 @@
     await this.select(slot, setlist);                // the slot being restored is the current preset
     await this.writeEditBuffer(blob);
     await this.saveAs(slot, name, setlist);
+  };
+  PodGo.prototype.onNotify = function (fn) { this.listeners.push(fn); };
+  PodGo.prototype.slotInfo = async function (pos) {
+    var r = await this.ed.request(CMD.OBJECT_INFO, new Map([[0x62, pos]]), 5000, true);
+    if (!(r instanceof Map) || !(r.get(24) instanceof Map) || !(r.get(24).get(20) instanceof Map)) return null;
+    var o = r.get(24), b = o.get(20), ids = b.get(24), vals = b.get(11);
+    var raw = vals instanceof Map && Array.isArray(vals.get(4)) ? vals.get(4) : [];
+    // types[k]: "float" (knobs, dB, Hz), "int" (selectors), "bool" (switches), as the unit holds them
+    return { pos: pos, kind: o.get(19), category: b.get(9), on: b.get(10),
+             model: ids instanceof Map ? ids.get(25) : null,
+             values: raw.map(function (v) { return v instanceof F32 ? v.v : v; }),
+             types: raw.map(function (v) { return v instanceof F32 ? "float" : typeof v === "boolean" ? "bool" : typeof v === "number" ? "int" : "other"; }) };
+  };
+  // value: a number goes as float32 (knobs, dB, Hz), unless asInt (selectors: an integer); a boolean as a boolean
+  PodGo.prototype.setParam = function (pos, index, value, asInt) {
+    var v = typeof value === "boolean" ? value : asInt ? Math.round(value) : new F32(value);
+    return this.ed.request(CMD.SET_PARAM, new Map([[0x62, pos], [0x1d, true], [0x1a, 0], [0x1c, index], [0x77, v]]));
   };
   PodGo.prototype.close = async function () {
     for (var c of [this.lib, this.nf, this.ed]) if (c) await c.st.fin();
