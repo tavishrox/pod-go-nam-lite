@@ -17,7 +17,9 @@ module.exports = win => {
         device: pg && pg.device ? pg.device.name : null,
         blocks: [...document.getElementById('pick').options].map(o => o.textContent),
         tones: cur ? KEYS.map(k => cur.set.regions[k].name) : [],
-        saveShown: !document.getElementById('save').hidden })`);
+        saveShown: !document.getElementById('save').hidden,
+        firmware: document.getElementById('unitFw').hidden ? null : document.getElementById('unitFw').textContent,
+        build: document.getElementById('unitFw').title })`);
       out.presets = await js(`(async () => { const c = await pg.current();
         const l = await q(() => pg.presetList(c.setlist)); return { setlist: c.setlist, count: l.length,
         first: l.slice(0, 6).map(p => slotName(p.index) + ' ' + p.name) }; })()`);
