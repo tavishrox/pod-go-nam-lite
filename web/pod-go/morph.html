@@ -14,14 +14,41 @@ details.more > summary { cursor: pointer; width: fit-content; font: 500 13px/1.6
 details.more > summary::-webkit-details-marker { display: none; }
 details.more[open] > summary { margin-bottom: 8px; }
 details.more > summary:hover { text-decoration: underline; }
+/* app-style layout: a top bar, menus, and the tone editor in a resizable drawer */
+.wrap { gap: 20px; }
+.topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; }
+.topbar .brand { display: grid; gap: 2px; }
+.topbar .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.menu { position: relative; }
+.menu > summary { list-style: none; cursor: pointer; display: inline-block; }
+.menu > summary::-webkit-details-marker { display: none; }
+.menu-body { position: absolute; right: 0; top: calc(100% + 8px); z-index: 40; width: min(440px, calc(100vw - 32px));
+  background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 16px; display: grid; gap: 10px;
+  box-shadow: 0 18px 40px #0009; }
+.menu-body p { margin: 0; }
+.menu-body.links a { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; text-decoration: none; color: var(--ink); }
+.menu-body.links a:hover { background: var(--panel-hi, #221d3d); }
+.menu-body.links a span { color: var(--muted); font-size: 13px; }
+.in-app .web-only { display: none; }
+.morfx-foot { color: var(--muted); font-size: 13px; text-align: center; padding: 8px 0 4px; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: var(--dw, 520px); max-width: 100vw; z-index: 60;
+  display: flex; flex-direction: column; background: var(--panel); border-left: 1px solid var(--rule); box-shadow: -24px 0 60px #0008; }
+.drawer[hidden] { display: none; }
+.drawer-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--rule); }
+.drawer-head h2 { font-size: 22px; }
+.drawer-body { overflow: auto; padding: 18px; display: grid; gap: 14px; align-content: start; }
+.drawer-grip { position: absolute; left: -5px; top: 0; bottom: 0; width: 10px; cursor: ew-resize; touch-action: none; }
+.drawer-grip::after { content: ""; position: absolute; left: 4px; top: 50%; height: 44px; margin-top: -22px; width: 3px; border-radius: 3px; background: var(--rule); }
+.drawer-grip:hover::after { background: var(--accent); }
+@media (max-width: 640px) { .drawer { width: 100vw !important; } .drawer-grip { display: none; } }
 /* MORF-X lockup: the mark, the wordmark (silver MORF-, cyan X) and the tagline */
-.morfx { display: flex; align-items: center; gap: clamp(12px, 2.5vw, 20px); margin: 8px 0 6px;
-  font: 400 clamp(36px, 8vw, 68px)/1 "Michroma", "Space Grotesk", sans-serif; letter-spacing: 0.03em; }
-.morfx img { width: clamp(56px, 11vw, 92px); height: auto; flex: none; }
+.morfx { display: flex; align-items: center; gap: clamp(10px, 2vw, 16px); margin: 0;
+  font: 400 clamp(26px, 4.6vw, 42px)/1 "Michroma", "Space Grotesk", sans-serif; letter-spacing: 0.03em; }
+.morfx img { width: clamp(40px, 6.5vw, 60px); height: auto; flex: none; }
 .morfx .word { background: linear-gradient(180deg, #ffffff 0%, #e4e9f0 42%, #97a3b3 56%, #eef2f6 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent; white-space: nowrap; }
 .morfx .x { color: #5fe0db; -webkit-text-fill-color: #5fe0db; text-shadow: 0 0 18px #5fe0db66; }
-.morfx-tag { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; font: 500 12px/1 "IBM Plex Mono", monospace;
+.morfx-tag { display: flex; align-items: center; gap: 12px; margin: 0; font: 500 12px/1 "IBM Plex Mono", monospace;
   letter-spacing: 0.32em; text-transform: uppercase; color: #c9cfdb; }
 .morfx-tag::before, .morfx-tag::after { content: ""; height: 1px; width: 36px; background: #5fe0db; opacity: 0.8; }
 :root {
@@ -108,12 +135,33 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
 <body>
 <nav class="neon-nav" aria-label="Pages"><div class="in"><a class="neon-logo" href="index.html">ToneShift</a><div class="links"><a href="index.html">Setup</a><a href="converter.html">Converter</a><a href="how-to.html">Guide</a><a href="companion.html">Companion</a><a href="morph.html" aria-current="page">MORF-X</a><a href="https://github.com/tavishrox/pod-go-nam-lite">GitHub</a></div></div></nav>
 <div class="wrap">
-  <header>
-    <div class="eyebrow">POD Go now · Helix, HX Stomp and HX Effects to come · experiment</div>
-    <h1 class="morfx"><img src="morf-x-icon.svg" alt="" width="92" height="92"><span class="word" aria-label="MORF-X">MORF-<span class="x">X</span></span></h1>
-    <p class="morfx-tag">Your tone. In motion.</p>
-    <p class="lead">Drag the crosshair to blend a block between five tones: one in the centre, a different voicing in each corner. Every parameter of the model moves, knobs blend and switches change at the halfway point, and the block follows slowly, so a fast move becomes a smooth sweep.</p>
-    <p class="note"><b>Saved only when you say.</b> Connected, the pad moves the block's parameters live, the way the device's own editor does. Nothing is saved until you press <b>Save to the preset</b>, which saves the preset that's loaded, in its own slot and name; until then, reloading it on the unit puts everything back. Quit the editor app (POD Go Edit or HX Edit) first; use Chrome or Edge on a computer.</p>
+  <header class="topbar">
+    <div class="brand">
+      <h1 class="morfx"><img src="morf-x-icon.svg" alt="" width="60" height="60"><span class="word" aria-label="MORF-X">MORF-<span class="x">X</span></span></h1>
+      <p class="morfx-tag">Your tone. In motion.</p>
+    </div>
+    <div class="actions">
+      <button id="editOpen">Edit tones</button>
+      <details class="menu">
+        <summary class="btn ghost">About</summary>
+        <div class="menu-body">
+          <div class="eyebrow">POD Go and Helix · HX Stomp to come · experiment</div>
+          <p>Drag the crosshair to blend a block between five tones: one in the centre, a different voicing in each corner. Every parameter of the model moves, knobs blend and switches change at the halfway point, and the block follows the glide, so a fast move becomes a smooth sweep.</p>
+          <p class="note"><b>Saved only when you say.</b> Connected, the pad moves the block's parameters live, the way the device's own editor does. Nothing is saved until you press <b>Save to the preset</b>, which saves the preset that's loaded, in its own slot and name; until then, reloading it on the unit puts everything back. Quit the editor app (POD Go Edit or HX Edit) first<span class="web-only">; use Chrome or Edge on a computer</span>.</p>
+          <p class="status">Pad: drag or tap · arrows nudge · <kbd>1</kbd>–<kbd>5</kbd> jump to a tone · double-click a tone's dot to edit it.</p>
+        </div>
+      </details>
+      <details class="menu">
+        <summary class="btn ghost">More from ToneShift</summary>
+        <div class="menu-body links">
+          <a href="https://www.youtube.com/channel/UC8Fy07TKY0txLxOgj7edHCA" target="_blank" rel="noopener"><b>ToneShift on YouTube</b><span>Gear, reviews and tone creation</span></a>
+          <a href="https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/" target="_blank" rel="noopener"><b>NAM A2 Lite for POD Go</b><span>Neural Amp Modeler captures on the POD Go</span></a>
+          <a href="https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/converter.html" target="_blank" rel="noopener"><b>Capture converter</b><span>Turn .nam files into POD Go IRs</span></a>
+          <a href="https://github.com/tavishrox/pod-go-nam-lite" target="_blank" rel="noopener"><b>Code on GitHub</b><span>The firmware build, tools and these pages</span></a>
+          <a href="https://www.maxmctavish.com" target="_blank" rel="noopener"><b>Max McTavish</b><span>Live guitar and vocals: gigs and bookings</span></a>
+        </div>
+      </details>
+    </div>
   </header>
 
   <section class="panel">
@@ -148,7 +196,6 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
         <label class="chk"><input type="checkbox" id="spring"> Return to centre on release</label>
         <label class="chk"><input type="checkbox" id="snap"> Snap to nearest tone on release</label>
       </div>
-      <p class="status">Drag or tap the pad · arrows nudge · <kbd>1</kbd>–<kbd>5</kbd> jump to a tone · double-click a tone's dot to edit it</p>
     </section>
 
     <div style="display:grid; gap:20px; min-width:0">
@@ -164,8 +211,15 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
     </div>
   </div>
 
-  <section class="panel">
+  <footer class="morfx-foot">MORF-X by ToneShift · <a href="https://www.youtube.com/channel/UC8Fy07TKY0txLxOgj7edHCA" target="_blank" rel="noopener">YouTube</a> · <a href="https://tavishrox.github.io/pod-go-nam-lite/web/pod-go/" target="_blank" rel="noopener">NAM for POD Go</a> · <a href="https://github.com/tavishrox/pod-go-nam-lite" target="_blank" rel="noopener">GitHub</a> · <a href="https://www.maxmctavish.com" target="_blank" rel="noopener">Max McTavish</a></footer>
+</div>
+<aside id="editor" class="drawer" hidden aria-labelledby="editTitle">
+  <div class="drawer-grip" id="editGrip" title="Drag to resize"></div>
+  <div class="drawer-head">
     <h2 id="editTitle">Edit the five tones</h2>
+    <div class="row"><button id="editWide" class="ghost" title="Wider or narrower">Widen</button><button id="editClose" class="ghost">Close</button></div>
+  </div>
+  <div class="drawer-body">
     <p class="status" id="setSource"></p>
     <div class="tabs" id="tabs" role="tablist"></div>
     <div class="edit" id="edit"></div>
@@ -194,8 +248,8 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
       <input type="file" id="importDir" webkitdirectory multiple hidden>
     </div>
     <p class="status">Changes are kept in this browser, per model. <b>Blend</b> parameters are averaged; <b>pick</b> parameters (switches, selectors) take the value of the tone with the most weight; <b>fixed</b> ones are left as they are on the unit. Level the five tones with Ch Vol so the sweep doesn't jump in loudness.</p>
-  </section>
-</div>
+  </div>
+</aside>
 
 <script src="podgo-usb.js?v=2026-11-16c"></script>
 <script>
@@ -447,7 +501,7 @@ pad.addEventListener('pointercancel', release);
 pad.addEventListener('dblclick', e => {
   const r = pad.getBoundingClientRect(), [x, y] = fromPx(e.clientX - r.left, e.clientY - r.top);
   selectTone(nearest(x, y));
-  document.getElementById('edit').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  openEditor();
 });
 function nearest(x, y) {
   let best = 0, bd = Infinity;
@@ -598,6 +652,43 @@ function frame(now) {
 
 // ---- tone editor ----
 const tabsEl = document.getElementById('tabs'), editEl = document.getElementById('edit');
+// ---- the tone editor drawer: opened by Edit tones (or a double-click on a tone), resizable from its left edge ----
+const editorEl = document.getElementById('editor');
+function setDrawerWidth(w) {
+  w = Math.max(340, Math.min(window.innerWidth, Math.round(w)));
+  editorEl.style.setProperty('--dw', w + 'px');
+  try { localStorage.setItem('morfx-drawer-w', w); } catch (e) {}
+}
+try { const w = +localStorage.getItem('morfx-drawer-w'); if (w) editorEl.style.setProperty('--dw', w + 'px'); } catch (e) {}
+function openEditor() { editorEl.hidden = false; renderEdit(); }
+function closeEditor() { editorEl.hidden = true; }
+document.getElementById('editOpen').onclick = () => editorEl.hidden ? openEditor() : closeEditor();
+document.getElementById('editClose').onclick = closeEditor;
+document.getElementById('editWide').onclick = () => {
+  const now = editorEl.getBoundingClientRect().width, wide = Math.round(window.innerWidth * 0.9);
+  setDrawerWidth(now < wide - 20 ? wide : 520);
+};
+const grip = document.getElementById('editGrip');
+grip.addEventListener('pointerdown', e => {
+  grip.setPointerCapture(e.pointerId);
+  const move = ev => setDrawerWidth(window.innerWidth - ev.clientX);
+  const up = () => { grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); };
+  grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up);
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  document.querySelectorAll('details.menu[open]').forEach(d => d.open = false);
+  if (!editorEl.hidden && !e.defaultPrevented) closeEditor();
+});
+// menus: one open at a time; a click elsewhere closes them
+document.querySelectorAll('details.menu').forEach(d => d.addEventListener('toggle', () => {
+  if (d.open) document.querySelectorAll('details.menu[open]').forEach(o => { if (o !== d) o.open = false; });
+}));
+document.addEventListener('click', e => {
+  document.querySelectorAll('details.menu[open]').forEach(d => { if (!d.contains(e.target)) d.open = false; });
+});
+if (/[?&]app=1/.test(location.search)) document.documentElement.classList.add('in-app');
+
 function selectTone(k) { sel = k; renderTabs(); renderEdit(); }
 function showSource() {
   document.getElementById('editTitle').textContent = `Edit the five tones · ${cur.label}`;
