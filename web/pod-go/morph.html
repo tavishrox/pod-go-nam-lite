@@ -66,6 +66,31 @@ details.more > summary:hover { text-decoration: underline; }
 .unit-pic img { width: 100%; height: auto; display: block; filter: drop-shadow(0 14px 22px #000a); }
 .unit-pic figcaption { font: 500 11px/1 "IBM Plex Mono", monospace; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
 @media (max-width: 760px) { .panel.conn:has(#unitPic:not([hidden])) { grid-template-columns: minmax(0, 1fr); } .unit-pic img { max-width: 280px; } }
+.side { display: grid; gap: 20px; min-width: 0; align-content: start; }
+.padctl { display: grid; gap: 10px; }
+/* The app fills its window like a desktop app: no page scroll; the pad is the largest square that fits the
+   space left, so it is always fully in view; the right column scrolls on its own. Too small a window falls
+   back to the normal scrolling page. */
+@media (min-width: 900px) {
+  html.in-app { height: 100%; overflow-x: hidden; }
+  .in-app body { height: 100vh; overflow-x: hidden; overflow-y: auto; box-sizing: border-box; padding-block: 14px 10px; }
+  .in-app .unit-pic img { width: auto; max-width: 100%; max-height: clamp(80px, 14vh, 150px); }
+  .in-app .wrap { height: 100%; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 14px; }
+  .in-app .padbox { min-height: 260px; }   /* never smaller: a short window scrolls instead */
+  .in-app .main { min-height: 0; align-items: stretch; grid-template-columns: minmax(0, 1.3fr) minmax(300px, 1fr); }
+  .in-app .padpanel { min-height: 0; grid-template-rows: minmax(0, 1fr) auto; gap: 10px; padding: 12px; }
+  .in-app .padctl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; }
+  .in-app .padctl .ctl { flex: 1 1 220px; }
+  .in-app .padctl .readout { order: 3; flex: 1 1 100%; font-size: 12px; }
+  .in-app .conn-body { gap: 8px; }
+  .in-app #conn { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .in-app .side .panel { padding: 14px; }
+  .in-app .padbox { container-type: size; display: grid; place-items: center; }
+  .in-app .padwrap { width: min(100cqw, 100cqh); height: auto; }
+  .in-app .side { min-height: 0; overflow-y: auto; padding-right: 2px; scrollbar-width: thin; }
+  .in-app .morfx-foot { padding: 0; font-size: 12px; }
+  .in-app .panel.conn { padding-block: 12px; }
+}
 /* MORF-X lockup: the mark, the wordmark (silver MORF-, cyan X) and the tagline */
 .morfx { display: flex; align-items: center; gap: clamp(10px, 2vw, 16px); margin: 0;
   font: 400 clamp(26px, 4.6vw, 42px)/1 "Michroma", "Space Grotesk", sans-serif; letter-spacing: 0.03em; }
@@ -221,19 +246,23 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
   </section>
 
   <div class="main">
-    <section class="panel">
-      <div class="padwrap" id="pad" tabindex="0" aria-label="X-Y pad. Arrow keys move the target, 1 to 5 jump to a tone.">
-        <canvas id="cv"></canvas>
+    <section class="panel padpanel">
+      <div class="padbox">
+        <div class="padwrap" id="pad" tabindex="0" aria-label="X-Y pad. Arrow keys move the target, 1 to 5 jump to a tone.">
+          <canvas id="cv"></canvas>
+        </div>
       </div>
-      <div class="readout"><span id="posOut">x 0.00 · y 0.00</span><span id="tgtOut">target 0.00, 0.00</span></div>
-      <div class="ctl"><span>Glide</span><input type="range" id="glide" min="0" max="3000" step="50" value="50"><output id="glideOut"></output></div>
-      <div class="row">
-        <label class="chk"><input type="checkbox" id="spring"> Return to centre on release</label>
-        <label class="chk"><input type="checkbox" id="snap"> Snap to nearest tone on release</label>
+      <div class="padctl">
+        <div class="readout"><span id="posOut">x 0.00 · y 0.00</span><span id="tgtOut">target 0.00, 0.00</span></div>
+        <div class="ctl"><span>Glide</span><input type="range" id="glide" min="0" max="3000" step="50" value="50"><output id="glideOut"></output></div>
+        <div class="row">
+          <label class="chk"><input type="checkbox" id="spring"> Return to centre on release</label>
+          <label class="chk"><input type="checkbox" id="snap"> Snap to nearest tone on release</label>
+        </div>
       </div>
     </section>
 
-    <div style="display:grid; gap:20px; min-width:0">
+    <div class="side">
       <section class="panel">
         <h2>Blend</h2>
         <div class="weights" id="weights"></div>

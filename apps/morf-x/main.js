@@ -19,7 +19,7 @@ const WEB = path.join(__dirname, 'web');
 
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1180, height: 920, minWidth: 420, minHeight: 600, title: 'MORF-X', backgroundColor: '#100e1f',
+    width: 1280, height: 860, minWidth: 900, minHeight: 700, title: 'MORF-X', backgroundColor: '#100e1f',
     icon: path.join(__dirname, 'res', 'MORF-X.png'),
     webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false }
   });
