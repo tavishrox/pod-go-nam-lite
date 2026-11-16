@@ -64,6 +64,7 @@ details.more > summary:hover { text-decoration: underline; }
 .conn-body { display: grid; gap: 14px; min-width: 0; }
 .unit-pic { margin: 0; display: grid; gap: 6px; justify-items: center; }
 .unit-pic img { width: 100%; height: auto; display: block; filter: drop-shadow(0 14px 22px #000a); }
+.unit-pic .unit-fw { margin: 0; font: 400 11px/1.4 "IBM Plex Mono", monospace; color: var(--muted, #9a96b8); text-align: center; }
 .unit-pic figcaption { font: 500 11px/1 "IBM Plex Mono", monospace; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
 @media (max-width: 760px) { .panel.conn:has(#unitPic:not([hidden])) { grid-template-columns: minmax(0, 1fr); } .unit-pic img { max-width: 280px; } }
 .side { display: grid; gap: 20px; min-width: 0; align-content: start; }
@@ -215,7 +216,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
   </header>
 
   <section class="panel conn">
-    <figure class="unit-pic" id="unitPic" hidden><img id="unitImg" alt=""><figcaption id="unitName"></figcaption></figure>
+    <figure class="unit-pic" id="unitPic" hidden><img id="unitImg" alt=""><figcaption id="unitName"></figcaption><p class="unit-fw" id="unitFw" hidden></p></figure>
     <div class="conn-body">
       <div class="conn-grid">
         <div class="field"><span>Device</span>
@@ -326,7 +327,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
   </div>
 </aside>
 
-<script src="podgo-usb.js?v=2026-11-16h"></script>
+<script src="podgo-usb.js?v=2026-11-16i"></script>
 <script>
 'use strict';
 // ---- the five tones: keys as in the tone files, positions in pad space (x, y in [-1, 1], y up) ----
@@ -992,6 +993,15 @@ const STD_NAMES = ['Drive', 'Bass', 'Mid', 'Treble', 'Presence', 'ChVol', 'Maste
 // The NAM firmware puts NAM A2 Lite in Elektrik's place (model 27): same knob slots, other meanings, and Master
 // picks the capture. So that block never gets Elektrik's tones: its own set starts from the block, Master fixed.
 const NAM_MODEL = 27, NAM_ID = '*nam-a2-lite';
+let fw = null, namSeen = false;   // the unit's firmware (read once on connect); a NAM A2 Lite block seen in this preset
+function showFw() {
+  const el = document.getElementById('unitFw');
+  if (!fw || !fw.version) { el.hidden = true; return; }
+  el.textContent = `Firmware ${fw.version}` + (fw.sixSnap ? ' · 6 snapshots' : '') + (namSeen ? ' · NAM' : '');
+  el.title = `Build ${fw.build || '?'}` + (fw.sixSnap ? '. Six-snapshot firmware: it sent snapshots 5 and 6.' : '') +
+    (namSeen ? ' NAM A2 Lite is in this preset (model 27, Elektrik on stock firmware).' : '');
+  el.hidden = false;
+}
 const isHelix = () => !!(pg && pg.device && pg.device.family === 'helix');
 function posLabel(p) {         // POD Go: the slot number; Helix family: DSP, path and slot, e.g. 1A4
   if (!isHelix()) return String(p);
@@ -1019,6 +1029,8 @@ async function scanNow(keepPos) {
     info.amp = d.symbol ? /^HD2_(Amp|Preamp)/.test(d.symbol) : info.category === 17;
     blocks.push(info);
   }
+  namSeen = !isHelix() && blocks.some(b => b.model === NAM_MODEL);
+  showFw();
   document.getElementById('pickLabel').textContent = 'Block';
   pickSel.innerHTML = blocks.map(b => `<option value="${b.pos}"${b.names ? '' : ' disabled'}>${posLabel(b.pos)} · ${escapeHtml(b.label)}${b.on ? '' : ' (off)'}` +
     (b.symbol && !setFor(b.symbol) ? ' · no tones yet' : '') + '</option>').join('');
@@ -1064,6 +1076,7 @@ function afterDisconnect() {
   document.getElementById('refresh').hidden = true;
   plField.hidden = true;
   document.getElementById('unitPic').hidden = true;
+  fw = null; namSeen = false; document.getElementById('unitFw').hidden = true;
   document.getElementById('restore').hidden = true; document.getElementById('grab').hidden = true;
   fillPicker(cur && cur.id);
 }
@@ -1086,6 +1099,7 @@ document.getElementById('connect').onclick = async () => {
       document.getElementById('unitName').textContent = pg.device.name;
       document.getElementById('unitPic').hidden = false;
     }
+    try { fw = await pg.firmware(); } catch (e) { fw = null; console.debug('firmware read', e); }
     await scan();
     await plInit();
   } catch (e) {

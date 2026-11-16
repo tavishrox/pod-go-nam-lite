@@ -399,6 +399,22 @@
     if (!(r instanceof Uint8Array)) throw fail("the unit didn't send a preset");
     return r;
   };
+  // What the unit says about its firmware, from the edit buffer's section 7 {35: version, 36: code, 37: build}:
+  // version 0x03800020 is 3.80.0 (major, then minor and patch as hex digits). On the POD Go the read also asks
+  // for snapshots 5 and 6: only the six-snapshot firmware answers, with key 14.
+  PodGo.prototype.firmware = async function () {
+    var pod = !this.device || this.device.family !== "helix";
+    var b = await this.readPreset(pod), p = MP.decodeAt(b, 0)[1];
+    p = MP.decodeAt(b, p)[1];
+    var sec = MP.decodeAt(b, p)[0], s7 = sec instanceof Map ? sec.get(7) : null;
+    if (!(s7 instanceof Map)) return null;
+    var v = s7.get(35), str = function (x) { return x instanceof Uint8Array ? text(x) : x == null ? "" : String(x); };
+    return {
+      version: typeof v === "number" ? (v >>> 24) + "." + (v >>> 16 & 255).toString(16) + "." + (v >>> 8 & 255).toString(16) : "",
+      raw: v, code: str(s7.get(36)), build: str(s7.get(37)),
+      sixSnap: pod && !!snapshots56(b)
+    };
+  };
   PodGo.prototype.writeEditBuffer = async function (blob) {
     if (text(blob.slice(1, 9)) !== "l6-helix") throw fail("that isn't a POD Go preset");
     var done = this.event(20, 4000);                 // the request's completion, if it completes later
