@@ -8,7 +8,13 @@ version. It is distributed WITHOUT ANY WARRANTY; see LICENSE.
 
 What is not here
 ----------------
-No Line 6 firmware, code or data is included or distributed. The build reads
+No Line 6 firmware or code is included or distributed. One exception, data only:
+web/pod-go/focus-defaults.json and web/pod-go/focus-helix.json hold Line 6's Focus
+View default tones (preset settings), with POD Go Edit's and HX Edit's model
+numbers and parameter order, so MORF-X can recognise blocks. Credited to Line 6;
+not sold. The pictures in web/pod-go/devices/ are the author's own renders.
+
+The build reads
 the user's own copy of the official HX Stomp, HX Stomp XL or HX Effects 3.80.0
 (or POD Go 2.50) firmware file and changes
 it on the user's computer. The patcher contains the offsets and table layouts
@@ -39,6 +45,6 @@ model file format; no NeuralAmpModelerCore source is included.
 
 Trademarks
 ----------
-Line 6, Helix, HX Stomp, HX Effects and HX Edit are trademarks of Yamaha Guitar Group,
+Line 6, POD Go, Helix, HX Stomp, HX Effects and HX Edit are trademarks of Yamaha Guitar Group,
 Inc. This project is not affiliated with, endorsed by or supported by Line 6
 or Yamaha Guitar Group. SHARC is a trademark of Analog Devices, Inc.

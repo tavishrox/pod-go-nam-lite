@@ -19,10 +19,13 @@ POD Go's own DSP as an amp block, with your effects either side of it.
 > video: it's for tinkerers, the kind of folks who hang around on GitHub, the same folks who were modding Tube
 > Screamers in the 80s. Just a heads-up: understand the risks before you start. *ToneShift*
 >
-> **No Line 6 files in this project.** This repository contains no Line 6 firmware, code or artwork. Everything
-> that uses Line 6's work is made during the build, on your computer, from the official firmware file you
+> **No Line 6 firmware or artwork in this project.** This repository contains no Line 6 firmware, code or artwork.
+> Everything that uses Line 6's firmware is made during the build, on your computer, from the official firmware file you
 > download from Line 6: the NAM block is written into your own copy, the boot screen is drawn over your own, and
 > the six-snapshot tiles are drawn from your own firmware's snapshot images.
+> The one exception is MORF-X's default tones: Line 6's Focus View presets for each model, with the POD Go's
+> and Helix's model numbers and parameter order, included with credit to Line 6. They are preset settings, not
+> firmware, and are free to use; nothing is sold.
 
 This is a fork of **[hx-stomp-nam-lite](https://github.com/nocaseguy/hx-stomp-nam-lite)** by Derek Bui,
 which does the same for the HX Stomp, HX Stomp XL and HX Effects. For the HX Stomp and XL, use Derek's project.
@@ -99,5 +102,6 @@ what happened).
 - **[Neural Amp Modeler](https://www.neuralampmodeler.com)** by Steven Atkinson: the A2 model format.
 - **POD Go port**: Mark Daniels (TavishRox, ToneShift). Copyright (C) 2026 Mark Daniels.
 
-GPL-3.0-or-later, as upstream. See [LICENSE](LICENSE) and [NOTICE](NOTICE). No Line 6 firmware, code, data or
-artwork is included or distributed, and no NAM captures.
+GPL-3.0-or-later, as upstream. See [LICENSE](LICENSE) and [NOTICE](NOTICE). No Line 6 firmware, code or
+artwork is included or distributed, and no NAM captures. MORF-X's default tones are Line 6's Focus View presets
+(`web/pod-go/focus-defaults.json`, `web/pod-go/focus-helix.json`), credited to Line 6.
