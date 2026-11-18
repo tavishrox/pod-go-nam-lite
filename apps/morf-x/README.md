@@ -1,6 +1,6 @@
 # MORF-X desktop app
 
-MORF-X ("your tone, in motion") as its own app: the MORF-X page from `web/pod-go/morph.html` in a window,
+MORF-X ("find your tone") as its own app: the MORF-X page from `web/pod-go/morph.html` in a window,
 talking to the unit over USB with no browser and no device chooser. Mac first; Windows from the same project.
 
 Units: POD Go and Helix (tested), HX Stomp and HX Stomp XL (not yet tried; Save stays hidden on them).

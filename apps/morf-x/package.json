@@ -2,7 +2,7 @@
   "name": "morf-x",
   "productName": "MORF-X",
   "version": "0.1.0",
-  "description": "MORF-X: your tone, in motion. Morph a POD Go or Helix block between five tones over USB.",
+  "description": "MORF-X: find your tone. Morph a POD Go or Helix block between five tones over USB.",
   "main": "main.js",
   "private": true,
   "license": "GPL-3.0-or-later",

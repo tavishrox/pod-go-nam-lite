@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>MORF-X for POD Go</title>
 <link rel="icon" href="morf-x-icon.svg" type="image/svg+xml">
-<meta name="description" content="MORF-X: your tone, in motion. An X-Y pad that blends a block on your Line 6 device between five tones: a centre and four corners.">
+<meta name="description" content="MORF-X: find your tone. An X-Y pad that blends a block on your Line 6 device between five tones: a centre and four corners.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Michroma&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -101,6 +101,7 @@ details.more > summary:hover { text-decoration: underline; }
 .morfx .x { color: #5fe0db; -webkit-text-fill-color: #5fe0db; text-shadow: 0 0 18px #5fe0db66; }
 .morfx-tag { display: flex; align-items: center; gap: 12px; margin: 0; font: 500 12px/1 "IBM Plex Mono", monospace;
   letter-spacing: 0.32em; text-transform: uppercase; color: #c9cfdb; }
+.morfx-tag em { font-style: normal; font-weight: 700; color: #5fe0db; text-shadow: 0 0 12px #5fe0db66; }
 .morfx-tag::before, .morfx-tag::after { content: ""; height: 1px; width: 36px; background: #5fe0db; opacity: 0.8; }
 :root {
   --bg: #e9ebe8; --panel: #f6f7f5; --ink: #1a1d1f; --muted: #5d6468; --rule: #c9cdca;
@@ -189,7 +190,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
   <header class="topbar">
     <div class="brand">
       <h1 class="morfx"><img src="morf-x-icon.svg" alt="" width="60" height="60"><span class="word" aria-label="MORF-X">MORF-<span class="x">X</span></span></h1>
-      <p class="morfx-tag">Your tone. In motion.</p>
+      <p class="morfx-tag"><span>Find <em>your</em> tone</span></p>
     </div>
     <div class="actions">
       <button id="editOpen">Edit tones</button>
