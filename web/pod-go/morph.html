@@ -95,7 +95,13 @@ details.more > summary:hover { text-decoration: underline; }
 /* MORF-X lockup: the mark, the wordmark (silver MORF-, cyan X) and the tagline */
 .morfx { display: flex; align-items: center; gap: clamp(10px, 2vw, 16px); margin: 0;
   font: 400 clamp(26px, 4.6vw, 42px)/1 "Michroma", "Space Grotesk", sans-serif; letter-spacing: 0.03em; }
-.morfx img { height: 0.86em; width: auto; flex: none; }
+.morfx { position: relative; isolation: isolate; }
+.morfx .word { position: relative; }
+.morfx .word::before, .morfx .word::after { content: ""; position: absolute; z-index: -1; pointer-events: none; }
+.morfx .word::before { left: -10%; right: -10%; top: 52%; height: 1px;
+  background: linear-gradient(90deg, transparent, #5fe0db80 20%, #5fe0db80 80%, transparent); }
+.morfx .word::after { left: 50%; top: -45%; bottom: -22%; width: 1px;
+  background: linear-gradient(180deg, transparent, #5fe0db80 25%, #5fe0db80 75%, transparent); }
 .morfx .word { background: linear-gradient(180deg, #ffffff 0%, #e4e9f0 42%, #97a3b3 56%, #eef2f6 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent; white-space: nowrap; }
 .morfx .x { color: #5fe0db; -webkit-text-fill-color: #5fe0db; text-shadow: 0 0 18px #5fe0db66; }
@@ -189,7 +195,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width
 <div class="wrap">
   <header class="topbar">
     <div class="brand">
-      <h1 class="morfx"><img src="morf-x-icon.svg" alt="" width="60" height="60"><span class="word" aria-label="MORF-X">MORF-<span class="x">X</span></span></h1>
+      <h1 class="morfx"><span class="word" aria-label="MORF-X">MORF-<span class="x">X</span></span></h1>
       <p class="morfx-tag"><span>Find <em>your</em> tone</span></p>
     </div>
     <div class="actions">
