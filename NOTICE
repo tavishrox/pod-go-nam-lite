@@ -8,11 +8,7 @@ version. It is distributed WITHOUT ANY WARRANTY; see LICENSE.
 
 What is not here
 ----------------
-No Line 6 firmware or code is included or distributed. One exception, data only:
-web/pod-go/focus-defaults.json and web/pod-go/focus-helix.json hold Line 6's Focus
-View default tones (preset settings), with POD Go Edit's and HX Edit's model
-numbers and parameter order, so MORF-X can recognise blocks. Credited to Line 6;
-not sold. The pictures in web/pod-go/devices/ are the author's own renders.
+No Line 6 firmware or code is included or distributed. The pictures in web/pod-go/devices/ are the author's own renders.
 
 The build reads
 the user's own copy of the official HX Stomp, HX Stomp XL or HX Effects 3.80.0
